@@ -24,6 +24,9 @@ internal static class Program
         var compile = CompileCommandBuilder.Create(ueVersion, mappings);
         root.Add(compile);
 
+        var verify = VerifyCommandBuilder.Create(ueVersion, mappings);
+        root.Add(verify);
+
         return root.Invoke(args);
     }
 }
