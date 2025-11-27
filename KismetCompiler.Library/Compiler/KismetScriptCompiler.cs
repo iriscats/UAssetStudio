@@ -1615,9 +1615,27 @@ public partial class KismetScriptCompiler
                         }
                     }
                 }
-            }
+        }
         catch (Exception ex)
         {
+            // Fallback: handle ubergraph calls with label argument even if symbol resolution fails
+            if (callOperator.Identifier.Text.StartsWith("ExecuteUbergraph_"))
+            {
+                uint? codeOffset = null;
+                try
+                {
+                    codeOffset = GetCodeOffset(callOperator.Arguments.FirstOrDefault());
+                }
+                catch { /* ignore */ }
+
+                var offsetValue = (int)(codeOffset ?? 0);
+                return Emit(callOperator, new EX_LocalFinalFunction()
+                {
+                    StackNode = GetPackageIndex(callOperator.Identifier, context: callContext),
+                    Parameters = new[] { new EX_IntConst() { Value = offsetValue } }
+                });
+            }
+
             throw new InvalidOperationException($"Error compiling function call: {ex.Message}", ex);
         }
         finally
@@ -1820,6 +1838,18 @@ public partial class KismetScriptCompiler
     /// <exception cref="NotImplementedException"></exception>
     private CompiledExpressionContext CompileIdentifierExpression(Identifier identifier)
     {
+        // Treat ubergraph label identifiers like "ExecuteUbergraph_<ClassName>_<Offset>_<CallingFn>"
+        // as integer code offsets to allow compiling calls to ExecuteUbergraph without
+        // requiring prior label declarations.
+        var _m = System.Text.RegularExpressions.Regex.Match(identifier.Text, "^ExecuteUbergraph_.+?_(\\d+)(?:_|$)");
+        if (_m.Success && int.TryParse(_m.Groups[1].Value, out var _labelOffset))
+        {
+            return Emit(identifier, new EX_IntConst()
+            {
+                Value = _labelOffset
+            });
+        }
+
         var symbol = GetRequiredSymbol(identifier, identifier.Text);
         if (symbol is VariableSymbol variableSymbol)
         {
@@ -2852,6 +2882,21 @@ public partial class KismetScriptCompiler
             {
                 return true;
             }
+
+            // Fallback: parse ubergraph label name to a resolved label symbol
+            var _m2 = System.Text.RegularExpressions.Regex.Match(identifier.Text, "^ExecuteUbergraph_.+?_(\\d+)(?:_|$)");
+            if (_m2.Success && int.TryParse(_m2.Groups[1].Value, out var _offset))
+            {
+                label = new LabelSymbol(null)
+                {
+                    DeclaringSymbol = null,
+                    IsExternal = false,
+                    Name = identifier.Text,
+                    CodeOffset = _offset,
+                    IsResolved = true,
+                };
+                return true;
+            }
         }
 
         label = null;
@@ -2956,7 +3001,8 @@ public partial class KismetScriptCompiler
     /// <param name="name"></param>
     /// <returns></returns>
     private bool IsIntrinsicFunction(string name)
-        => typeof(EExprToken).GetEnumNames().Contains(name);
+        => typeof(EExprToken).GetEnumNames().Contains(name)
+           || typeof(EExprToken).GetEnumNames().Contains($"EX_{name}");
 
     /// <summary>
     /// Derives the expression token (opcode) from the function name.
@@ -2964,5 +3010,9 @@ public partial class KismetScriptCompiler
     /// <param name="name"></param>
     /// <returns></returns>
     private EExprToken GetInstrinsicFunctionToken(string name)
-        => (EExprToken)System.Enum.Parse(typeof(EExprToken), name);
+    {
+        var enumNames = typeof(EExprToken).GetEnumNames();
+        var resolved = enumNames.Contains(name) ? name : $"EX_{name}";
+        return (EExprToken)System.Enum.Parse(typeof(EExprToken), resolved);
+    }
 }

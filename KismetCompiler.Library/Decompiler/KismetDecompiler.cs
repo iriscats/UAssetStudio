@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using KismetKompiler.Library.Decompiler;
 using KismetKompiler.Library.Decompiler.Analysis;
@@ -94,7 +94,15 @@ public partial class KismetDecompiler
 
                     foreach (var func in group)
                     {
-                        DecompileFunction(func);
+                        try
+                        {
+                            DecompileFunction(func);
+                        }
+                        catch (Exception ex)
+                        {
+                            _writer.WriteLine($"// Error decompiling function {FormatIdentifier(func.ObjectName.ToString())}: {ex.Message}");
+                            _writer.WriteLine();
+                        }
                     }
 
                     _writer.Pop();
@@ -144,7 +152,11 @@ public partial class KismetDecompiler
             .Where(x => x is FunctionExport)
             .Cast<FunctionExport>()
             .Union(functionsWithThisOuter)
-            .OrderBy(x => _class.FuncMap.IndexOf(x.ObjectName));
+            .OrderBy(x =>
+            {
+                var idx = _class.FuncMap?.IndexOf(x.ObjectName) ?? -1;
+                return idx >= 0 ? idx : _asset.Exports.IndexOf(x);
+            });
 
     
         var classModifiers = GetClassModifiers(_class);
@@ -168,7 +180,15 @@ public partial class KismetDecompiler
 
         foreach (var fun in classFunctions)
         {
-            DecompileFunction(fun);
+            try
+            {
+                DecompileFunction(fun);
+            }
+            catch (Exception ex)
+            {
+                _writer.WriteLine($"// Error decompiling function {FormatIdentifier(fun.ObjectName.ToString())}: {ex.Message}");
+                _writer.WriteLine();
+            }
         }
 
         _writer.Pop();
@@ -442,7 +462,7 @@ public partial class KismetDecompiler
                     if (isBlockStart)
                         _writer.WriteLine($"{FormatCodeOffset((uint)block.CodeStartOffset, functionName, callingFunctionName)}:");
 
-                    var cond = FormatExpression(ifBlock.Condition, null);
+                    var cond = ifBlock.Condition != null ? FormatExpression(ifBlock.Condition, null) : "true /* null condition */";
                     _writer.WriteLine($"if ({cond}) {{");
                     _writer.Push();
                     WriteBlock(ifBlock);
@@ -578,7 +598,18 @@ public partial class KismetDecompiler
     }
 
     private void WriteExpression(Node node, bool isUbergraphFunction)
-        => WriteExpression(node, isUbergraphFunction, FormatExpression(node.Source, null));
+    {
+        try
+        {
+            var formatted = node.Source != null ? FormatExpression(node.Source, null) : string.Empty;
+            WriteExpression(node, isUbergraphFunction, formatted);
+        }
+        catch (Exception ex)
+        {
+            // Skip malformed expression to preserve compilability of the output
+            WriteExpression(node, isUbergraphFunction, string.Empty);
+        }
+    }
 
     public IEnumerable<EClassFlags> GetClassFlags(ClassExport classExport)
     {
