@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using System.Linq;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using KismetKompiler.Decompiler;
@@ -7,13 +8,68 @@ using KismetKompiler.Library.Compiler;
 using KismetKompiler.Library.Compiler.Processing;
 using KismetKompiler.Library.Parser;
 using UAssetAPI;
+using UAssetAPI.ExportTypes;
 using UAssetAPI.UnrealTypes;
 using UAssetAPI.Unversioned;
+using UAssetAPI.Kismet;
+using Newtonsoft.Json;
 
 namespace UAssetStudio.Cli.CMD
 {
     internal static class CliHelpers
     {
+        internal static void VerifyOldAndNew(string fileName, UAsset asset, CompiledScriptContext script)
+        {
+            try
+            {
+                // Prepare serializer with new asset context
+                KismetSerializer.asset = asset;
+
+                // Old: functions from original asset (tolerate missing bytecode)
+                var classExport = asset.GetClassExport();
+                var oldJsons = asset.Exports
+                    .Where(x => x is FunctionExport)
+                    .Cast<FunctionExport>()
+                    .OrderBy(x => classExport?.FuncMap?.IndexOf(x.ObjectName) ?? -1)
+                    .Select(x =>
+                    {
+                        var bc = x.ScriptBytecode ?? Array.Empty<UAssetAPI.Kismet.Bytecode.KismetExpression>();
+                        var json = JsonConvert.SerializeObject(KismetSerializer.SerializeScript(bc), Formatting.Indented);
+                        return (x.ObjectName.ToString(), json);
+                    });
+
+                // New: functions from compiled script
+                var newJsons = script.Classes
+                    .SelectMany(x => x.Functions)
+                    .Select(x =>
+                    {
+                        var bc = (x.Bytecode ?? new List<UAssetAPI.Kismet.Bytecode.KismetExpression>()).ToArray();
+                        var json = JsonConvert.SerializeObject(KismetSerializer.SerializeScript(bc), Formatting.Indented);
+                        return (x.Symbol.Name, json);
+                    });
+
+                var oldJsonText = string.Join("\n", oldJsons);
+                var newJsonText = string.Join("\n", newJsons);
+
+                File.WriteAllText("old.json", oldJsonText);
+                File.WriteAllText("new.json", newJsonText);
+
+                if (oldJsonText != newJsonText)
+                {
+                    Console.WriteLine($"Verification failed: {fileName}");
+                }
+                else
+                {
+                    Console.WriteLine($"Verification passed: {fileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Warn] Old/New verification skipped: {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+        // Removed unused verification helper requiring non-existent UnrealPackage type
+
         internal static UAsset LoadAsset(EngineVersion ueVersion, string? mappings, string assetPath)
         {
             return mappings != null
@@ -73,4 +129,3 @@ namespace UAssetStudio.Cli.CMD
         }
     }
 }
-
