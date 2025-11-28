@@ -32,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Linker\ZenAssetLinker.cs" />
+    <Compile Remove="Linker\**\*.cs" />
     <Compile Remove="Decompiler\**\*.cs" />
   </ItemGroup>
 

@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetCompiler.Library", "K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetDecompiler.Library", "KismetDecompiler.Library\KismetDecompiler.Library.csproj", "{C3E9C1B0-7C2A-4B2D-9F71-1A2B3C4D5E6F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetLinker.Library", "KismetLinker.Library\KismetLinker.Library.csproj", "{7F6A4312-3B5A-4C4A-BE3D-1E2F3A4B5C6D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
