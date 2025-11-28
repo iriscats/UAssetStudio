@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <Compile Remove="Linker\ZenAssetLinker.cs" />
+    <Compile Remove="Decompiler\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
