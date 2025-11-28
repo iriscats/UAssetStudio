@@ -1,7 +1,7 @@
 ﻿using UAssetAPI;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Packaging;
+namespace KismetCompiler.Library.Packaging;
 
 public record ImportIndex(
     Import Import,

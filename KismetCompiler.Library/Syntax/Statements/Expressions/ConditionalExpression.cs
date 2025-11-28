@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Syntax.Statements.Expressions;
+﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class ConditionalExpression : Expression, IOperator
 {

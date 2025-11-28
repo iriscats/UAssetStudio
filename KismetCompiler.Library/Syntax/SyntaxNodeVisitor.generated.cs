@@ -1,12 +1,12 @@
-using KismetKompiler.Library.Syntax;
-using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Unary;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Binary;
-using KismetKompiler.Library.Syntax.Statements.Declarations;
-namespace KismetKompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Unary;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
+using KismetCompiler.Library.Syntax.Statements.Declarations;
+namespace KismetCompiler.Library.Syntax;
 public interface ISyntaxNodeVisitor {
     void Visit(Argument node);
     void Visit(OutArgument node);

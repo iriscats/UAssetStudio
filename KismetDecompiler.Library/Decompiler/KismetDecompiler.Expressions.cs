@@ -2,11 +2,11 @@
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Utilities;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using KismetKompiler.Library.Decompiler.Analysis;
+using KismetCompiler.Library.Decompiler.Analysis;
 
-namespace KismetKompiler.Decompiler
+namespace KismetCompiler.Decompiler
 {
     public partial class KismetDecompiler
     {

@@ -1,7 +1,7 @@
-using KismetKompiler.Library.Compiler.Context;
+using KismetCompiler.Library.Compiler.Context;
 using UAssetAPI.Kismet.Bytecode;
 
-namespace KismetKompiler.Library.Compiler.Intermediate;
+namespace KismetCompiler.Library.Compiler.Intermediate;
 
 public class IntermediatePropertyPointer : KismetPropertyPointer
 {

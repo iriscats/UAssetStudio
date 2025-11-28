@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Decompiler.Analysis;
+﻿namespace KismetCompiler.Library.Decompiler.Analysis;
 
 public class PackageAnalysisResult
 {

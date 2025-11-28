@@ -1,7 +1,7 @@
-﻿using KismetKompiler.Library.Compiler.Context;
+﻿using KismetCompiler.Library.Compiler.Context;
 using UAssetAPI.Kismet.Bytecode;
 
-namespace KismetKompiler.Compiler;
+namespace KismetCompiler.Compiler;
 
 public class PortableKismetPropertyPointer : KismetPropertyPointer
 {

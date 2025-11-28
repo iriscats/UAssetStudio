@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Syntax.Statements.Expressions.Unary;
+﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions.Unary;
 
 public class LogicalNotOperator : PrefixOperator
 {

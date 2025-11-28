@@ -1,7 +1,7 @@
-﻿using KismetKompiler.Library.Syntax.Statements.Declarations;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
+﻿using KismetCompiler.Library.Syntax.Statements.Declarations;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
 
-namespace KismetKompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public abstract class Declaration : Statement
 {

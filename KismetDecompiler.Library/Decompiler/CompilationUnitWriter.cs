@@ -1,15 +1,15 @@
-﻿using KismetKompiler.Library.Syntax;
-using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Declarations;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Binary;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Unary;
+﻿using KismetCompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Declarations;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Unary;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace KismetKompiler.Library.Decompiler;
+namespace KismetCompiler.Library.Decompiler;
 
 public class CompilationUnitWriter
 {

@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Compiler;
+﻿namespace KismetCompiler.Library.Compiler;
 
 // TODO: refactor symbol/context handling
 // How it works currently is very confusing

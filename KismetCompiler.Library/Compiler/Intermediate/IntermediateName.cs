@@ -1,6 +1,6 @@
 ﻿using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Compiler.Intermediate;
+namespace KismetCompiler.Library.Compiler.Intermediate;
 
 public class IntermediateName : FName
 {

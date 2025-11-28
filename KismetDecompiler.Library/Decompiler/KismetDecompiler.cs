@@ -1,20 +1,20 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using KismetKompiler.Library.Decompiler;
-using KismetKompiler.Library.Decompiler.Analysis;
-using KismetKompiler.Library.Decompiler.Context;
-using KismetKompiler.Library.Decompiler.Context.Nodes;
-using KismetKompiler.Library.Decompiler.Context.Properties;
-using KismetKompiler.Library.Decompiler.Passes;
-using KismetKompiler.Library.Parser;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Decompiler;
+using KismetCompiler.Library.Decompiler.Analysis;
+using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Decompiler.Context.Nodes;
+using KismetCompiler.Library.Decompiler.Context.Properties;
+using KismetCompiler.Library.Decompiler.Passes;
+using KismetCompiler.Library.Parser;
+using KismetCompiler.Library.Utilities;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Decompiler;
+namespace KismetCompiler.Decompiler;
 
 public partial class KismetDecompiler
 {

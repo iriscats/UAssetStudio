@@ -1,9 +1,9 @@
-﻿using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
+﻿using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
 using System.Text;
 
-namespace KismetKompiler.Library.Syntax.Statements.Declarations;
+namespace KismetCompiler.Library.Syntax.Statements.Declarations;
 
 public enum ProcedureModifier
 {

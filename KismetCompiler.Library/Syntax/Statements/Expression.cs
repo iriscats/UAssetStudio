@@ -1,7 +1,7 @@
 ﻿using Antlr4.Runtime;
-using KismetKompiler.Library.Parser;
+using KismetCompiler.Library.Parser;
 
-namespace KismetKompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public abstract class Expression : Statement
 {

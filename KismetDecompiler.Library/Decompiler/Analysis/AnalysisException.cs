@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace KismetKompiler.Library.Decompiler.Analysis
+namespace KismetCompiler.Library.Decompiler.Analysis
 {
     [Serializable]
     public class AnalysisException : Exception

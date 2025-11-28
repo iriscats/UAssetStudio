@@ -1,9 +1,9 @@
-﻿using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
+﻿using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
 
-namespace KismetKompiler.Library.Syntax;
+namespace KismetCompiler.Library.Syntax;
 
 public class Parameter : SyntaxNode
 {

@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Syntax;
+﻿namespace KismetCompiler.Library.Syntax;
 
 [Flags]
 public enum VariableModifier

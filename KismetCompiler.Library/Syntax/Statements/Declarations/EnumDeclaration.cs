@@ -1,6 +1,6 @@
-﻿using KismetKompiler.Library.Syntax.Statements.Expressions;
+﻿using KismetCompiler.Library.Syntax.Statements.Expressions;
 
-namespace KismetKompiler.Library.Syntax.Statements.Declarations;
+namespace KismetCompiler.Library.Syntax.Statements.Declarations;
 
 public class EnumDeclaration : Declaration
 {

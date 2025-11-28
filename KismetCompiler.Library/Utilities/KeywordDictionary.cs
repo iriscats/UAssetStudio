@@ -1,6 +1,6 @@
-﻿using KismetKompiler.Library.Syntax;
+﻿using KismetCompiler.Library.Syntax;
 
-namespace KismetKompiler.Library.Utilities;
+namespace KismetCompiler.Library.Utilities;
 
 public static class KeywordDictionary
 {

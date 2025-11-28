@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Utilities;
+﻿namespace KismetCompiler.Library.Utilities;
 
 public abstract class LogListener
 {

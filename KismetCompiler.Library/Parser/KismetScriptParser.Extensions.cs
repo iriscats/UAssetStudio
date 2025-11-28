@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Parser
+﻿namespace KismetCompiler.Library.Parser
 {
     public partial class KismetScriptParser
     {

@@ -1,6 +1,6 @@
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
 
-namespace KismetKompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class CastOperator : UnaryExpression, IOperator
 {

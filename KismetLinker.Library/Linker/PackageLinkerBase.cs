@@ -1,7 +1,7 @@
-using KismetKompiler.Library.Compiler;
-using KismetKompiler.Library.Compiler.Context;
-using KismetKompiler.Library.Compiler.Intermediate;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Compiler;
+using KismetCompiler.Library.Compiler.Context;
+using KismetCompiler.Library.Compiler.Intermediate;
+using KismetCompiler.Library.Utilities;
 using System.Text.RegularExpressions;
 using UAssetAPI;
 using UAssetAPI.CustomVersions;
@@ -11,7 +11,7 @@ using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Packaging;
+namespace KismetCompiler.Library.Packaging;
 
 public abstract partial class PackageLinker<T> where T : UnrealPackage
 {

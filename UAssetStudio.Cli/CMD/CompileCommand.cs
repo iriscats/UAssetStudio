@@ -1,6 +1,6 @@
 using System.CommandLine;
 using System.IO;
-using KismetKompiler.Library.Packaging;
+using KismetCompiler.Library.Packaging;
 using UAssetAPI.UnrealTypes;
 
 namespace UAssetStudio.Cli.CMD

@@ -2,18 +2,18 @@
 using Antlr4.Runtime.Tree;
 using System.Globalization;
 using System.Diagnostics;
-using KismetKompiler.Library.Syntax;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Unary;
-using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Binary;
-using KismetKompiler.Library.Syntax.Statements.Declarations;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
-using static KismetKompiler.Library.Parser.KismetScriptParser;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Unary;
+using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
+using KismetCompiler.Library.Syntax.Statements.Declarations;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using static KismetCompiler.Library.Parser.KismetScriptParser;
+using KismetCompiler.Library.Utilities;
 
-namespace KismetKompiler.Library.Parser;
+namespace KismetCompiler.Library.Parser;
 
 /// <summary>
 /// Represents a parser that turns ANTLR's parse tree into an abstract syntax tree (AST).

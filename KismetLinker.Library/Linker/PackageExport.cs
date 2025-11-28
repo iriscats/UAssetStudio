@@ -1,6 +1,6 @@
 ﻿using UAssetAPI.ExportTypes;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Packaging;
+namespace KismetCompiler.Library.Packaging;
 
 public record PackageExport<T>(FPackageIndex Index, T Export) where T : Export;
