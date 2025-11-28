@@ -1,22 +1,22 @@
-using KismetKompiler.Library.Compiler.Exceptions;
-using KismetKompiler.Library.Compiler.Context;
-using KismetKompiler.Library.Syntax;
-using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Declarations;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Unary;
+using KismetCompiler.Library.Compiler.Exceptions;
+using KismetCompiler.Library.Compiler.Context;
+using KismetCompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Declarations;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Unary;
 using System.Data;
 using System.Diagnostics;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using KismetKompiler.Library.Compiler.Intermediate;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Binary;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Compiler.Intermediate;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
+using KismetCompiler.Library.Utilities;
 
-namespace KismetKompiler.Library.Compiler;
+namespace KismetCompiler.Library.Compiler;
 
 /// <summary>
 /// This class implements all the necessary logic for compiling a parsed compilation unit AST into an intermediary Kismet script.

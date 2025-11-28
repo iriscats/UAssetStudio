@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Compiler.Context;
+﻿namespace KismetCompiler.Library.Compiler.Context;
 
 public static class SymbolExtensions
 {

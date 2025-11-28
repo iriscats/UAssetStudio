@@ -1,6 +1,6 @@
 ﻿using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Decompiler.Analysis
+namespace KismetCompiler.Library.Decompiler.Analysis
 {
     public interface ISymbolTable : IEnumerable<Symbol>, IList<Symbol>
     {

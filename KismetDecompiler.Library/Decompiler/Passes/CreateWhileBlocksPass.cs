@@ -1,10 +1,10 @@
-﻿using KismetKompiler.Library.Decompiler.Context;
-using KismetKompiler.Library.Decompiler.Context.Nodes;
+﻿using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Decompiler.Context.Nodes;
 using System.ComponentModel;
 using System.Xml.Linq;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 
-namespace KismetKompiler.Library.Decompiler.Passes
+namespace KismetCompiler.Library.Decompiler.Passes
 {
     public class CreateWhileBlocksPass : IDecompilerPass
     {

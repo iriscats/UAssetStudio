@@ -1,16 +1,16 @@
-using KismetKompiler.Library.Compiler.Exceptions;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Binary;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
-using KismetKompiler.Library.Syntax;
+using KismetCompiler.Library.Compiler.Exceptions;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Literals;
-using KismetKompiler.Library.Syntax.Statements.Expressions.Unary;
-using KismetKompiler.Library.Compiler.Context;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Unary;
+using KismetCompiler.Library.Compiler.Context;
 using UAssetAPI.UnrealTypes;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Utilities;
 
-namespace KismetKompiler.Library.Compiler;
+namespace KismetCompiler.Library.Compiler;
 
 public partial class KismetScriptCompiler
 {

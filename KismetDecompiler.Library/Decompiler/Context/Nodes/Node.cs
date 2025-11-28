@@ -1,6 +1,6 @@
 ﻿using UAssetAPI.Kismet.Bytecode;
 
-namespace KismetKompiler.Library.Decompiler.Context.Nodes;
+namespace KismetCompiler.Library.Decompiler.Context.Nodes;
 
 public class Node
 {

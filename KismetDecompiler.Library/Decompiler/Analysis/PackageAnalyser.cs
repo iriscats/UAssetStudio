@@ -1,5 +1,5 @@
-using KismetKompiler.Library.Decompiler.Analysis.Visitors;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Decompiler.Analysis.Visitors;
+using KismetCompiler.Library.Utilities;
 using System.Diagnostics;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
@@ -7,7 +7,7 @@ using UAssetAPI.FieldTypes;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Decompiler.Analysis;
+namespace KismetCompiler.Library.Decompiler.Analysis;
 
 public partial class PackageAnalyser
 {

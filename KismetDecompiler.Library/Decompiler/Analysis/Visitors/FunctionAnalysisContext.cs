@@ -1,6 +1,6 @@
 ﻿using UAssetAPI;
 
-namespace KismetKompiler.Library.Decompiler.Analysis.Visitors;
+namespace KismetCompiler.Library.Decompiler.Analysis.Visitors;
 
 public class FunctionAnalysisContext
 {

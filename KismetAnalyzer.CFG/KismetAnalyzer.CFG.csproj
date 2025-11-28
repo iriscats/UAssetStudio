@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <OutputType>Library</OutputType>
     <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>KismetAnalyzer.CFG</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <GenerateProgramFile>false</GenerateProgramFile>
-    <LangVersion>12</LangVersion>
+    <RootNamespace>KismetAnalyzer.CFG</RootNamespace>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="viz\**" />
   </ItemGroup>

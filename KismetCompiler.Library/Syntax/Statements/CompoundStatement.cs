@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace KismetKompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class CompoundStatement : Statement, IEnumerable<Statement>
 {

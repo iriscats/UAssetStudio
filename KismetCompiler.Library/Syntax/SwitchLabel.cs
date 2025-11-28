@@ -1,4 +1,4 @@
-namespace KismetKompiler.Library.Syntax;
+namespace KismetCompiler.Library.Syntax;
 
 public abstract class SwitchLabel : SyntaxNode
 {

@@ -1,6 +1,6 @@
-﻿using KismetKompiler.Library.Syntax;
+﻿using KismetCompiler.Library.Syntax;
 
-namespace KismetKompiler.Library.Compiler.Exceptions;
+namespace KismetCompiler.Library.Compiler.Exceptions;
 
 public class UnexpectedSyntaxError : CompilationError
 {

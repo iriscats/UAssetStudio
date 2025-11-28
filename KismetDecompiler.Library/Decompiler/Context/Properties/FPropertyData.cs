@@ -1,9 +1,9 @@
-﻿using KismetKompiler.Library.Utilities;
+﻿using KismetCompiler.Library.Utilities;
 using UAssetAPI;
 using UAssetAPI.FieldTypes;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Decompiler.Context.Properties;
+namespace KismetCompiler.Library.Decompiler.Context.Properties;
 
 public class FPropertyData : IPropertyData
 {

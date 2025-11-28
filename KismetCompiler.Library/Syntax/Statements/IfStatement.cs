@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace KismetKompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class IfStatement : Statement, IBlockStatement
 {

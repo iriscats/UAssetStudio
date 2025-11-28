@@ -2,7 +2,7 @@
 using System.Xml.Linq;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Decompiler.Analysis;
+namespace KismetCompiler.Library.Decompiler.Analysis;
 
 public class AggregrateSymbolTable : ISymbolTable
 {

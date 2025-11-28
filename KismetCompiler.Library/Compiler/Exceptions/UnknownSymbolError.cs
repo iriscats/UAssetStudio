@@ -1,7 +1,7 @@
-﻿using KismetKompiler.Library.Syntax.Statements.Expressions;
+﻿using KismetCompiler.Library.Syntax.Statements.Expressions;
 using System.Runtime.Serialization;
 
-namespace KismetKompiler.Library.Compiler.Exceptions
+namespace KismetCompiler.Library.Compiler.Exceptions
 {
     [Serializable]
     internal class UnknownSymbolError : Exception

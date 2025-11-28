@@ -1,10 +1,10 @@
 ﻿using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
-using KismetKompiler.Library.Decompiler.Context.Nodes;
-using KismetKompiler.Library.Decompiler.Context;
-using KismetKompiler.Library.Utilities;
+using KismetCompiler.Library.Decompiler.Context.Nodes;
+using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Utilities;
 
-namespace KismetKompiler.Library.Decompiler.Passes
+namespace KismetCompiler.Library.Decompiler.Passes
 {
     public class CreateBasicNodesPass : IDecompilerPass
     {

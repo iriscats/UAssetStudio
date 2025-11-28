@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System.Text;
 
-namespace KismetKompiler.Library.Decompiler;
+namespace KismetCompiler.Library.Decompiler;
 
 class IndentedWriter : TextWriter
 {

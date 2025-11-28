@@ -1,6 +1,6 @@
-﻿using KismetKompiler.Library.Compiler.Context;
+﻿using KismetCompiler.Library.Compiler.Context;
 
-namespace KismetKompiler.Library.Compiler;
+namespace KismetCompiler.Library.Compiler;
 
 public class ClassContext
 {

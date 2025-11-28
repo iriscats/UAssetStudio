@@ -1,12 +1,12 @@
-﻿using KismetKompiler.Library.Compiler.Exceptions;
-using KismetKompiler.Library.Syntax;
-using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Declarations;
+﻿using KismetCompiler.Library.Compiler.Exceptions;
+using KismetCompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Declarations;
 using System.Collections;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Compiler.Context
+namespace KismetCompiler.Library.Compiler.Context
 {
     public enum SymbolCategory
     {

@@ -1,9 +1,9 @@
-﻿using KismetKompiler.Library.Compiler.Context;
-using KismetKompiler.Library.Packaging;
+﻿using KismetCompiler.Library.Compiler.Context;
+using KismetCompiler.Library.Packaging;
 using UAssetAPI.IO;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetKompiler.Library.Linker;
+namespace KismetCompiler.Library.Linker;
 
 public class ZenAssetLinker : PackageLinker<ZenAsset>
 {

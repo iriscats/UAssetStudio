@@ -1,6 +1,6 @@
-﻿using KismetKompiler.Library.Utilities;
+﻿using KismetCompiler.Library.Utilities;
 
-namespace KismetKompiler.Library.Syntax.Statements.Expressions.Identifiers;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
 
 public class TypeIdentifier : Identifier
 {

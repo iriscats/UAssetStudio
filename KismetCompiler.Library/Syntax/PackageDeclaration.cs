@@ -1,7 +1,7 @@
-﻿using KismetKompiler.Library.Syntax.Statements;
-using KismetKompiler.Library.Syntax.Statements.Expressions;
+﻿using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
 
-namespace KismetKompiler.Library.Syntax;
+namespace KismetCompiler.Library.Syntax;
 
 public class PackageDeclaration : Declaration
 {

@@ -1,6 +1,6 @@
-﻿using KismetKompiler.Library.Syntax.Statements;
+﻿using KismetCompiler.Library.Syntax.Statements;
 
-namespace KismetKompiler.Library.Syntax;
+namespace KismetCompiler.Library.Syntax;
 
 public class CompilationUnit : SyntaxNode
 {

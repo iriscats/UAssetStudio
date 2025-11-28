@@ -1,4 +1,4 @@
-﻿namespace KismetKompiler.Library.Syntax.Statements.Expressions.Binary;
+﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
 
 public class DivisionAssignmentOperator : CompoundAssignmentOperator
 {
