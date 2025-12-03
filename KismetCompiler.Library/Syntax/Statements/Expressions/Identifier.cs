@@ -1,8 +1,8 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class Identifier : PrimaryExpression
 {
-    public string Text { get; set; }
+    public string Text { get; set; } = string.Empty;
 
     public Identifier() : base(ValueKind.Unresolved)
     {

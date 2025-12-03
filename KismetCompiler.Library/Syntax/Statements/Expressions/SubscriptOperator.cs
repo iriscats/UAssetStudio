@@ -2,9 +2,9 @@ namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class SubscriptOperator : Expression, IOperator
 {
-    public Identifier Operand { get; set; }
+    public Identifier Operand { get; set; } = null!;
 
-    public Expression Index { get; set; }
+    public Expression Index { get; set; } = null!;
 
     public int Precedence => 2;
 

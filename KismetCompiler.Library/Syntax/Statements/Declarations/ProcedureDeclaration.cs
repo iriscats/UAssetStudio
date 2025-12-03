@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Syntax.Statements.Expressions;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
 using System.Text;
@@ -30,13 +30,13 @@ public class ProcedureDeclaration : Declaration, IBlockStatement
 
     public bool IsExternal => Body == null;
 
-    public IntLiteral Index { get; set; }
+    public IntLiteral Index { get; set; } = null!;
 
-    public TypeIdentifier ReturnType { get; set; }
+    public TypeIdentifier ReturnType { get; set; } = null!;
 
     public List<Parameter> Parameters { get; set; }
 
-    public CompoundStatement Body { get; set; }
+    public CompoundStatement? Body { get; set; }
 
     IEnumerable<CompoundStatement> IBlockStatement.Blocks => new[] { Body }.Where(x => x != null);
 

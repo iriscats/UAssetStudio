@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using KismetCompiler.Library.Syntax.Statements.Expressions;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
@@ -9,9 +9,9 @@ public class VariableDeclaration : Declaration
 {
     public VariableModifier Modifiers { get; set; }
 
-    public TypeIdentifier Type { get; set; }
+    public TypeIdentifier Type { get; set; } = null!;
 
-    public Expression Initializer { get; set; }
+    public Expression? Initializer { get; set; }
 
     public virtual bool IsArray => false;
 
@@ -43,7 +43,7 @@ public class VariableDeclaration : Declaration
 
 public class ArrayVariableDeclaration : VariableDeclaration
 {
-    public IntLiteral Size { get; set; }
+    public IntLiteral Size { get; set; } = null!;
 
     public override bool IsArray => true;
 

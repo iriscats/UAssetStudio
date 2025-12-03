@@ -1,10 +1,10 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public abstract class BinaryExpression : Expression
 {
-    public Expression Left { get; set; }
+    public Expression Left { get; set; } = null!;
 
-    public Expression Right { get; set; }
+    public Expression Right { get; set; } = null!;
 
     protected BinaryExpression(ValueKind kind) : base(kind)
     {

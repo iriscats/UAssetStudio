@@ -1,10 +1,10 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class ConditionalExpression : Expression, IOperator
 {
-    public Expression Condition { get; set; }
-    public Expression ValueIfTrue { get; set; }
-    public Expression ValueIfFalse { get; set; }
+    public Expression Condition { get; set; } = null!;
+    public Expression ValueIfTrue { get; set; } = null!;
+    public Expression ValueIfFalse { get; set; } = null!;
 
     public int Precedence => 16;
 

@@ -1,4 +1,4 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
 
 public class StringLiteral : Literal<string>, IEquatable<StringLiteral>
 {
@@ -17,7 +17,7 @@ public class StringLiteral : Literal<string>, IEquatable<StringLiteral>
         return $"\"{Value}\"";
     }
 
-    public bool Equals(StringLiteral other)
+    public bool Equals(StringLiteral? other)
     {
         return Value == other?.Value;
     }

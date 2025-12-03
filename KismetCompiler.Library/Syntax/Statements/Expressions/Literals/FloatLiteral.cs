@@ -1,4 +1,4 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
 
 public class FloatLiteral : Literal<float>, IEquatable<FloatLiteral>
 {
@@ -15,7 +15,7 @@ public class FloatLiteral : Literal<float>, IEquatable<FloatLiteral>
         return FormattableString.Invariant($"{Value:0.00#####}");
     }
 
-    public bool Equals(FloatLiteral other)
+    public bool Equals(FloatLiteral? other)
     {
         return Value == other?.Value;
     }

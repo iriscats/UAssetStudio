@@ -1,8 +1,8 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class ReturnStatement : Statement
 {
-    public Expression Value { get; set; }
+    public Expression? Value { get; set; }
 
     public ReturnStatement()
     {

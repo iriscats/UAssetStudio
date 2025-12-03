@@ -1,14 +1,14 @@
-﻿using System.Text;
+using System.Text;
 
 namespace KismetCompiler.Library.Syntax.Statements;
 
 public class IfStatement : Statement, IBlockStatement
 {
-    public Expression Condition { get; set; }
+    public Expression Condition { get; set; } = null!;
 
-    public CompoundStatement Body { get; set; }
+    public CompoundStatement Body { get; set; } = null!;
 
-    public CompoundStatement ElseBody { get; set; }
+    public CompoundStatement? ElseBody { get; set; }
 
     IEnumerable<CompoundStatement> IBlockStatement.Blocks => new[] { Body, ElseBody }.Where(x => x != null);
 

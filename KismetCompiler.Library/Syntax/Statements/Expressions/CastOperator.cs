@@ -4,7 +4,7 @@ namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class CastOperator : UnaryExpression, IOperator
 {
-    public TypeIdentifier TypeIdentifier { get; set; }
+    public TypeIdentifier TypeIdentifier { get; set; } = null!;
 
     public int Precedence => 2;
 

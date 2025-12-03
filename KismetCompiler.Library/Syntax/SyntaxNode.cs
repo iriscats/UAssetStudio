@@ -1,8 +1,8 @@
-﻿namespace KismetCompiler.Library.Syntax;
+namespace KismetCompiler.Library.Syntax;
 
 public abstract class SyntaxNode
 {
-    public SourceInfo SourceInfo { get; internal set; }
+    public SourceInfo? SourceInfo { get; internal set; }
 
     public override string ToString()
     {

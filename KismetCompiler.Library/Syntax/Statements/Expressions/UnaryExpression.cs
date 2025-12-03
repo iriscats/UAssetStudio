@@ -1,8 +1,8 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public abstract class UnaryExpression : Expression
 {
-    public Expression Operand { get; set; }
+    public Expression Operand { get; set; } = null!;
 
     protected UnaryExpression(ValueKind kind) : base(kind)
     {

@@ -1,8 +1,8 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class SwitchStatement : Statement
 {
-    public Expression SwitchOn { get; set; }
+    public Expression SwitchOn { get; set; } = null!;
 
     public List<SwitchLabel> Labels { get; set; }
 

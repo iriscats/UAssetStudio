@@ -15,6 +15,7 @@ using UAssetAPI.UnrealTypes;
 using KismetCompiler.Library.Compiler.Intermediate;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Binary;
 using KismetCompiler.Library.Utilities;
+using KismetCompiler.Library.Compiler.Frontend;
 
 namespace KismetCompiler.Library.Compiler;
 
@@ -203,7 +204,8 @@ public partial class KismetScriptCompiler
         var script = new CompiledScriptContext();
 
         PushScope(null);
-        BuildSymbolTree(compilationUnit);
+        var symbolBuilder = new SymbolTreeBuilder();
+        symbolBuilder.Build(compilationUnit, RootScope);
         CompileScript(compilationUnit, script);
         PopScope();
 
@@ -246,279 +248,9 @@ public partial class KismetScriptCompiler
     /// <param name="compilationUnit"></param>
     /// <exception cref="NotImplementedException"></exception>
     /// <exception cref="UnexpectedSyntaxError"></exception>
-    private void BuildSymbolTree(CompilationUnit compilationUnit)
-    {
-        void ScanCompoundStatement(CompoundStatement compoundStatement, Symbol parent, bool isExternal)
-        {
-            foreach (var statement in compoundStatement)
-            {
-                ScanStatement(statement, parent, isExternal);
-            }
-        }
+    
 
-        void ScanStatement(Statement statement, Symbol parent, bool isExternal)
-        {
-            if (statement is Declaration declaration)
-            {
-                CreateDeclarationSymbol(declaration, parent, isExternal);
-            }
-            else if (statement is ForStatement forStatement)
-            {
-                ScanStatement(forStatement.Initializer, parent, isExternal);
-                if (forStatement.Body != null)
-                    ScanCompoundStatement(forStatement.Body, parent, isExternal);
-            }
-            else if (statement is IBlockStatement blockStatement)
-            {
-                foreach (var block in blockStatement.Blocks)
-                    ScanCompoundStatement(block, parent, isExternal);
-            }
-            else
-            {
-                // Nothing to do.
-            }
-        }
-
-        Symbol CreateDeclarationSymbol(Declaration declaration, Symbol? parent, bool isExternal)
-        {
-            var declaringPackage = (parent is PackageSymbol packageSymbol) ? packageSymbol : parent?.DeclaringPackage;
-            var declaringClass = (parent is ClassSymbol classSymbol) ? classSymbol : parent?.DeclaringClass;
-            var declaringProcedure = (parent is ProcedureSymbol procedureSymbol) ? procedureSymbol : parent?.DeclaringProcedure;
-
-            if (declaration is LabelDeclaration labelDeclaration)
-            {
-                return new LabelSymbol(labelDeclaration)
-                {
-                    Name = labelDeclaration.Identifier.Text,
-                    DeclaringSymbol = parent,
-                    IsExternal = isExternal,
-                };
-            }
-            else if (declaration is VariableDeclaration variableDeclaration)
-            {
-                return new VariableSymbol(variableDeclaration)
-                {
-                    Name = variableDeclaration.Identifier.Text,
-                    DeclaringSymbol = parent,
-                    IsExternal = isExternal,
-                };
-            }
-            else if (declaration is ProcedureDeclaration procedureDeclaration)
-            {
-                var symbol = new ProcedureSymbol(procedureDeclaration)
-                {
-                    Name = procedureDeclaration.Identifier.Text,
-                    DeclaringSymbol = parent,
-                    IsExternal = isExternal,
-                    Flags = GetFunctionFlags(procedureDeclaration),
-                    CustomFlags = GetCustomFunctionFlags(procedureDeclaration)             
-                };
-                if (procedureDeclaration.Body != null)
-                {
-                    ScanCompoundStatement(procedureDeclaration.Body, symbol, isExternal);
-                }
-                return symbol;
-            }
-            else if (declaration is ClassDeclaration classDeclaration)
-            {
-                var symbol = new ClassSymbol(classDeclaration)
-                {
-                    Name = classDeclaration.Identifier.Text,
-                    DeclaringSymbol = parent,
-                    IsExternal = isExternal,
-                };
-                if (classDeclaration.Declarations != null)
-                {
-                    foreach (var subDeclaration in classDeclaration.Declarations)
-                        ScanStatement(subDeclaration, symbol, isExternal);
-                }
-                return symbol;
-            }
-            else if (declaration is EnumDeclaration enumDeclaration)
-            {
-                var symbol = new EnumSymbol(enumDeclaration)
-                {
-                    Name = enumDeclaration.Identifier.Text,
-                    DeclaringSymbol = parent,
-                    IsExternal = isExternal,
-                };
-                var lastValue = 0;
-                foreach (var enumValueDeclaration in enumDeclaration.Values)
-                {
-                    var value = (enumValueDeclaration.Value as IntLiteral)?.Value ?? lastValue + 1;
-                    lastValue = value;
-
-                    var valueSymbol = new EnumValueSymbol(enumValueDeclaration)
-                    {
-                        Name = enumValueDeclaration.Identifier.Text,
-                        Value = value,
-                        DeclaringSymbol = symbol,
-                        IsExternal = isExternal,
-                    };
-                }
-                return symbol;
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        // Find imported packages, and group the declarations that are imported from it
-        var packageImports = new List<(string PackagePath, List<Declaration> Declarations)>();
-        foreach (var decl in compilationUnit.Declarations)
-        {
-            var importAttrib = decl.Attributes.FirstOrDefault(x => IsPackageImportAttribute(x));
-            if (importAttrib != null)
-            {
-                if (importAttrib.Arguments.Count != 1)
-                    throw new UnexpectedSyntaxError(importAttrib);
-                var packagePath = importAttrib.Arguments[0].Expression as StringLiteral;
-                if (packagePath == null) 
-                    throw new UnexpectedSyntaxError(importAttrib.Arguments[0]);
-                var importedDeclarations = packageImports.Where(x => x.PackagePath == packagePath).FirstOrDefault().Declarations;
-                if (importedDeclarations != null)
-                    importedDeclarations.Add(decl);
-                else
-                    packageImports.Add((packagePath, new() { decl }));
-            }
-        }
-
-        // Declare the global symbols present in the package imports
-        foreach ((var packagePath, var declarations) in packageImports)
-        {
-            var packageSymbol = new PackageSymbol()
-            {
-                IsExternal = true,
-                Name = packagePath,
-                DeclaringSymbol = null,
-            };
-            foreach (var item in declarations)
-                CreateDeclarationSymbol(item, packageSymbol, true);
-
-            // Declare package, classes and (static) functions as global symbols
-            // but only if they're unambigious-- two imports can not have the same key
-            // TODO: differenciate between static class functions and instance functions
-            IEnumerable<Symbol> GetImportGlobalSymbols(Symbol symbol)
-            {
-                yield return symbol;
-                foreach (var item in symbol.Members)
-                {
-                    if (item.DeclaringClass != null)
-                    {
-                        // Do not globally declare class properties
-                        continue;
-                    }
-                    foreach (var sub in GetImportGlobalSymbols(item))
-                        yield return sub;
-                }
-            }
-
-            var globalSymbols = GetImportGlobalSymbols(packageSymbol);
-            var distinctGlobalSymbols = globalSymbols
-                .DistinctBy(x => x.Key);
-            foreach (var symbol in distinctGlobalSymbols)
-                DeclareSymbol(symbol);
-        }
-
-        foreach (var declaration in compilationUnit.Declarations
-            .Except(packageImports.SelectMany(x => x.Declarations)))
-        {
-            var declarationSymbol = CreateDeclarationSymbol(declaration, null, false);
-            DeclareSymbol(declarationSymbol);
-
-            // The Ubergraph function does not adhere to standard scoping rules
-            // As such, some symbols defined in it will be imported into the global scope
-            void DeclareUbergraphFunctionGlobalSymbols(Symbol symbol)
-            {
-                foreach (var item in symbol.Members)
-                {
-                    if (ShouldGloballyDeclareProcecureLocalSymbol(item))
-                    {
-                        DeclareSymbol(item);
-                    }
-
-                    DeclareUbergraphFunctionGlobalSymbols(item);
-                }
-            }
-
-            DeclareUbergraphFunctionGlobalSymbols(declarationSymbol);
-        }
-
-        void ResolveSymbolReferences(Symbol symbol)
-        {
-            if (symbol is ClassSymbol classSymbol)
-            {
-                var baseClass = classSymbol.Declaration.BaseClassIdentifier;
-                if (baseClass != null && classSymbol.BaseClass == null)
-                {
-                    var baseClassSymbol = GetSymbol(baseClass.Text);
-                    if (baseClassSymbol != null && baseClassSymbol != classSymbol)
-                    {
-                        classSymbol.BaseSymbol = baseClassSymbol;
-
-                        // FIXME: check if this fix is still needed
-                        //// TODO: figure out a better solution
-                        //// HACK: import members from an object named Default__ClassName into ClassName
-                        //if (classSymbol.Name.StartsWith("Default__"))
-                        //{
-                        //    foreach (var member in classSymbol.Members.ToList())
-                        //        classSymbol.BaseClass!.DeclareSymbol(member);
-                        //}
-                    }
-                    else
-                    {
-                        // UserDefinedStruct, etc.
-                        symbol.BaseSymbol = new ClassSymbol(null)
-                        {
-                            DeclaringSymbol = null,
-                            IsExternal = true,
-                            Name = baseClass.Text,
-                        };
-                    }
-                }
-            }
-            else if (symbol is VariableSymbol variableSymbol)
-            {
-                var type = variableSymbol.Declaration.Type;
-                if (type.IsConstructedType)
-                    type = type.TypeParameter;
-                variableSymbol.InnerSymbol = GetSymbol(type.Text);
-            }
-
-            foreach (var member in symbol.Members)
-            {
-                ResolveSymbolReferences(member);
-            }
-        }
-
-        foreach (var item in CurrentScope)
-        {
-            ResolveSymbolReferences(item);
-        }
-    }
-
-    private static bool IsUbergraphFunction(ProcedureSymbol procedureSymbol)
-    {
-        return procedureSymbol.HasAnyFunctionFlags(EFunctionFlags.FUNC_UbergraphFunction)
-            || procedureSymbol.Name.StartsWith("ExecuteUbergraph_");
-    }
-
-    /// <summary>
-    /// Determines if a local variable has to be declared globally.
-    /// </summary>
-    /// <param name="item"></param>
-    /// <returns></returns>
-    private static bool ShouldGloballyDeclareProcecureLocalSymbol(Symbol item)
-    {
-        var isUbergraphFunction =
-            item.DeclaringProcedure == null ? false :
-            IsUbergraphFunction(item.DeclaringProcedure);
-        var isK2NodeVariable = item.Name.StartsWith("K2Node") && item.SymbolCategory == SymbolCategory.Variable;
-        var isLabel = item.SymbolCategory == SymbolCategory.Label;
-        var shouldDeclareSymbol = isUbergraphFunction && (isK2NodeVariable || isLabel);
-        return shouldDeclareSymbol;
-    }
+    
 
     /// <summary>
     /// Compiles a class declaration.
@@ -542,7 +274,7 @@ public partial class KismetScriptCompiler
         EClassFlags flags = 0;
         foreach (var attribute in classDeclaration.Attributes)
         {
-            if (IsPackageImportAttribute(attribute))
+            if (CompilerHelper.IsPackageImportAttribute(attribute))
                 continue;
 
             var classFlagText = $"CLASS_{attribute.Identifier.Text}";
@@ -619,11 +351,6 @@ public partial class KismetScriptCompiler
     /// </summary>
     /// <param name="attribute"></param>
     /// <returns></returns>
-    private static bool IsPackageImportAttribute(AttributeDeclaration attribute)
-    {
-        return attribute.Identifier.Text == "Import";
-    }
-
     /// <summary>
     /// Compiles the given variable declaration into a property.
     /// </summary>
@@ -643,50 +370,7 @@ public partial class KismetScriptCompiler
     /// </summary>
     /// <param name="procedureDeclaration"></param>
     /// <returns></returns>
-    private EFunctionFlags GetFunctionFlags(ProcedureDeclaration procedureDeclaration)
-    {
-        EFunctionFlags functionFlags = 0;
-        if (procedureDeclaration.Modifiers.HasFlag(ProcedureModifier.Public))
-            functionFlags |= EFunctionFlags.FUNC_Public;
-        if (procedureDeclaration.Modifiers.HasFlag(ProcedureModifier.Private))
-            functionFlags |= EFunctionFlags.FUNC_Private;
-        if (procedureDeclaration.Modifiers.HasFlag(ProcedureModifier.Sealed))
-            functionFlags |= EFunctionFlags.FUNC_Final;
-        if (procedureDeclaration.Modifiers.HasFlag(ProcedureModifier.Virtual))
-            ; // Not sealed
-        if (procedureDeclaration.Modifiers.HasFlag(ProcedureModifier.Protected))
-            functionFlags |= EFunctionFlags.FUNC_Protected;
-        if (procedureDeclaration.Modifiers.HasFlag(ProcedureModifier.Static))
-            functionFlags |= EFunctionFlags.FUNC_Static;
-
-        foreach (var attr in procedureDeclaration.Attributes)
-        {
-            var flagFormat = $"FUNC_{attr.Identifier.Text}";
-            if (!Enum.TryParse<EFunctionFlags>(flagFormat, out var flag))
-                continue;
-            functionFlags |= flag;
-        }
-        return functionFlags;
-    }
-
-    /// <summary>
-    /// Derives the custom blueprint function flags from the given procedure declaration.
-    /// The custom flags are made-up flags that make recompiling matching decompiled scripts easier.
-    /// </summary>
-    /// <param name="procedureDeclaration"></param>
-    /// <returns></returns>
-    private FunctionCustomFlags GetCustomFunctionFlags(ProcedureDeclaration procedureDeclaration)
-    {
-        FunctionCustomFlags functionFlags = 0;
-        foreach (var attr in procedureDeclaration.Attributes)
-        {
-            var flagFormat = $"{attr.Identifier.Text}";
-            if (!Enum.TryParse<FunctionCustomFlags>(attr.Identifier.Text, out var flag))
-                continue;
-            functionFlags |= flag;
-        }
-        return functionFlags;
-    }
+    
 
     /// <summary>
     /// Compiles a given procedure declaration.
@@ -1058,7 +742,8 @@ public partial class KismetScriptCompiler
                 {
                     BooleanExpression = CompileSubExpression(ifStatement.Condition),
                 }, new[] { endLabel });
-                CompileCompoundStatement(ifStatement.Body);
+                if (ifStatement.Body != null)
+                    CompileCompoundStatement(ifStatement.Body);
 
             }
             else
@@ -1068,10 +753,12 @@ public partial class KismetScriptCompiler
                 {
                     BooleanExpression = CompileSubExpression(ifStatement.Condition),
                 }, new[] { elseLabel });
-                CompileCompoundStatement(ifStatement.Body);
+                if (ifStatement.Body != null)
+                    CompileCompoundStatement(ifStatement.Body);
                 EmitPrimaryExpression(null, new EX_Jump(), new[] { endLabel });
                 ResolveLabel(elseLabel);
-                CompileCompoundStatement(ifStatement.ElseBody);
+                if (ifStatement.ElseBody != null)
+                    CompileCompoundStatement(ifStatement.ElseBody);
             }
 
             ResolveLabel(endLabel);
@@ -1335,7 +1022,7 @@ public partial class KismetScriptCompiler
     /// <param name="syntaxNode"></param>
     /// <param name="expressionState"></param>
     /// <returns></returns>
-    private CompiledExpressionContext EmitPrimaryExpression(SyntaxNode syntaxNode, CompiledExpressionContext expressionState)
+    private CompiledExpressionContext EmitPrimaryExpression(SyntaxNode? syntaxNode, CompiledExpressionContext expressionState)
     {
         _functionContext.AllExpressions.Add(expressionState);
         _functionContext.PrimaryExpressions.Add(expressionState);
@@ -1350,7 +1037,7 @@ public partial class KismetScriptCompiler
     /// <param name="expression"></param>
     /// <param name="referencedLabels"></param>
     /// <returns></returns>
-    private CompiledExpressionContext EmitPrimaryExpression(SyntaxNode syntaxNode, KismetExpression expression, IEnumerable<LabelSymbol>? referencedLabels = null)
+    private CompiledExpressionContext EmitPrimaryExpression(SyntaxNode? syntaxNode, KismetExpression expression, IEnumerable<LabelSymbol>? referencedLabels = null)
     {
         var expressionState = Emit(syntaxNode, expression, referencedLabels);
         _functionContext.AllExpressions.Add(expressionState);
@@ -2181,7 +1868,7 @@ public partial class KismetScriptCompiler
     /// <param name="expression"></param>
     /// <param name="isVirtual"></param>
     /// <returns></returns>
-    private (Identifier Identifier, bool IsLookup) GetMemberIdentifier(Expression expression, bool? isVirtual = null)
+    private (Identifier? Identifier, bool IsLookup) GetMemberIdentifier(Expression expression, bool? isVirtual = null)
     {
         if (expression is StringLiteral stringLiteral)
         {
@@ -2825,7 +2512,7 @@ public partial class KismetScriptCompiler
     /// <param name="expression2"></param>
     /// <param name="referencedLabels"></param>
     /// <returns></returns>
-    private CompiledExpressionContext Emit(SyntaxNode syntaxNode, KismetExpression expression, KismetExpression expression2, IEnumerable<LabelSymbol>? referencedLabels = null)
+    private CompiledExpressionContext Emit(SyntaxNode? syntaxNode, KismetExpression expression, KismetExpression expression2, IEnumerable<LabelSymbol>? referencedLabels = null)
     {
         return new CompiledExpressionContext()
         {
@@ -2843,7 +2530,7 @@ public partial class KismetScriptCompiler
     /// <param name="expression"></param>
     /// <param name="referencedLabels"></param>
     /// <returns></returns>
-    private CompiledExpressionContext Emit(SyntaxNode syntaxNode, KismetExpression expression, IEnumerable<LabelSymbol>? referencedLabels = null)
+    private CompiledExpressionContext Emit(SyntaxNode? syntaxNode, KismetExpression expression, IEnumerable<LabelSymbol>? referencedLabels = null)
     {
         return new CompiledExpressionContext()
         {
@@ -2942,7 +2629,7 @@ public partial class KismetScriptCompiler
     /// </summary>
     /// <param name="argument"></param>
     /// <returns></returns>
-    private uint? GetCodeOffset(Argument argument)
+    private uint? GetCodeOffset(Argument? argument)
     {
         if (!TryGetCodeOffset(argument, out var codeOffset))
             return null;
@@ -2957,8 +2644,13 @@ public partial class KismetScriptCompiler
     /// <param name="codeOffset"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    private bool TryGetCodeOffset(Argument argument, out uint codeOffset)
+    private bool TryGetCodeOffset(Argument? argument, out uint codeOffset)
     {
+        if (argument == null)
+        {
+            codeOffset = 0;
+            return false;
+        }
         if (argument.Expression is IntLiteral intLiteral)
         {
             codeOffset = (uint)intLiteral.Value;

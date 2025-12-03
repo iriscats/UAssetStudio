@@ -1,4 +1,4 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public abstract class Literal : PrimaryExpression
 {
@@ -12,7 +12,7 @@ public abstract class Literal : PrimaryExpression
 
 public abstract class Literal<T> : Literal
 {
-    public T Value { get; set; }
+    public T Value { get; set; } = default!;
 
     protected Literal(ValueKind kind) : base(kind)
     {

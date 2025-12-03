@@ -1,10 +1,10 @@
-﻿using System.Text;
+using System.Text;
 
 namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class CallOperator : Expression, IOperator
 {
-    public Identifier Identifier { get; set; }
+    public Identifier Identifier { get; set; } = null!;
 
     public List<Argument> Arguments { get; set; }
 

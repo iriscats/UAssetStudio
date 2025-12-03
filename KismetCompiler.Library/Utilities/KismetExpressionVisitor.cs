@@ -1,4 +1,4 @@
-﻿using UAssetAPI.Kismet.Bytecode.Expressions;
+using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 using System.CodeDom.Compiler;
@@ -324,11 +324,11 @@ public abstract class KismetExpressionVisitor<T>
                 {
                     if (exp is EX_Context_FailSilent)
                     {
-                        exp = exp as EX_Context_FailSilent;
+                        exp = (EX_Context_FailSilent)exp;
                     }
                     else if (exp is EX_ClassContext)
                     {
-                        exp = exp as EX_ClassContext;
+                        exp = (EX_ClassContext)exp;
                     }
                     else { }
                     Visit(exp.ObjectExpression, ref codeOffset);

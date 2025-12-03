@@ -1,8 +1,8 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class GotoStatement : Statement
 {
-    public Expression Label { get; set; }
+    public Expression Label { get; set; } = null!;
 
     public GotoStatement()
     {
