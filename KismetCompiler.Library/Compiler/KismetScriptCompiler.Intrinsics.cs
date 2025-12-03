@@ -1,4 +1,4 @@
-﻿using UAssetAPI.Kismet.Bytecode.Expressions;
+using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 using KismetCompiler.Library.Compiler.Exceptions;
