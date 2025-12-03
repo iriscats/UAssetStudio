@@ -36,22 +36,13 @@ namespace UAssetStudio.Cli.CMD
                 var kmsPath = Path.Join(dir, Path.ChangeExtension(Path.GetFileName(assetPath), ".kms"));
                 CliHelpers.DecompileToKms(asset, kmsPath);
 
-                UAsset newAsset;
-                try
-                {
-                    // 2) Compile .kms back
-                    var script = CliHelpers.CompileKms(kmsPath, ver);
+                // 2) Compile .kms back
+                var script = CliHelpers.CompileKms(kmsPath, ver);
 
-                    // 3) Link compiled script into asset
-                    newAsset = new UAssetLinker(asset)
+                // 3) Link compiled script into asset
+                var newAsset = new UAssetLinker(asset)
                         .LinkCompiledScript(script)
                         .Build();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[Warn] Compile/link failed: {ex.GetType().Name}: {ex.Message}. Writing original asset as fallback.");
-                    newAsset = asset; // Fallback: write original asset to ensure end-to-end verify completes
-                }
 
                 // 5) Write .new.uasset
                 var outFile = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(assetPath, ".new.uasset")));
