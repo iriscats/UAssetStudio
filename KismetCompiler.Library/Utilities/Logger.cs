@@ -1,4 +1,4 @@
-﻿namespace KismetCompiler.Library.Utilities;
+namespace KismetCompiler.Library.Utilities;
 
 public abstract class LogListener
 {
@@ -8,12 +8,13 @@ public abstract class LogListener
 
     public LogListener()
     {
-
+        ChannelName = string.Empty;
     }
 
     public LogListener(LogLevel filter)
     {
         Filter = filter;
+        ChannelName = string.Empty;
     }
 
     public LogListener(string channelName)
@@ -111,6 +112,7 @@ public class LogEventArgs : EventArgs
 
     public LogEventArgs(string channelName, LogLevel level, string message)
     {
+        ChannelName = channelName;
         Level = level;
         Message = message;
     }

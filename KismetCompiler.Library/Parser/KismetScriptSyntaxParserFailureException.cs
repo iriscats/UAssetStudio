@@ -1,8 +1,5 @@
-﻿using System.Runtime.Serialization;
-
 namespace KismetCompiler.Library.Parser;
 
-[Serializable]
 internal class KismetScriptSyntaxParserFailureException : Exception
 {
     public KismetScriptSyntaxParserFailureException()
@@ -17,7 +14,4 @@ internal class KismetScriptSyntaxParserFailureException : Exception
     {
     }
 
-    protected KismetScriptSyntaxParserFailureException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
-    }
 }

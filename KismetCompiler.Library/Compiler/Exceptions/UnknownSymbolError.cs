@@ -1,9 +1,7 @@
-﻿using KismetCompiler.Library.Syntax.Statements.Expressions;
-using System.Runtime.Serialization;
+using KismetCompiler.Library.Syntax.Statements.Expressions;
 
 namespace KismetCompiler.Library.Compiler.Exceptions
 {
-    [Serializable]
     internal class UnknownSymbolError : Exception
     {
         private Identifier identifier;
@@ -25,8 +23,5 @@ namespace KismetCompiler.Library.Compiler.Exceptions
         {
         }
 
-        protected UnknownSymbolError(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }
