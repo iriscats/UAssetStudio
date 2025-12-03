@@ -18,19 +18,31 @@ namespace UAssetStudio.Cli.CMD
 {
     internal static class CliHelpers
     {
-        internal static void VerifyOldAndNew(string fileName, UAsset asset, CompiledScriptContext script)
+        internal static void VerifyOldAndNew(string oldAssetPath, string newAssetPath, EngineVersion ueVersion, string? mappings)
+        {
+            var oldAsset = LoadAsset(ueVersion, mappings, oldAssetPath);
+            var newAsset = LoadAsset(ueVersion, mappings, newAssetPath);
+
+            var oldJsonText = oldAsset.SerializeJson(true);
+            var newJsonText = newAsset.SerializeJson(true);
+
+            File.WriteAllText("old.json", oldJsonText);
+            File.WriteAllText("new.json", newJsonText);
+
+            Assert.AreEqual(oldJsonText, newJsonText);
+        }
+
+        internal static void VerifyOldAndNewExport(string fileName, UAsset oldAsset, UAsset newAsset)
         {
             try
             {
-                // Prepare serializer with new asset context
-                KismetSerializer.asset = asset;
-
                 // Old: functions from original asset (tolerate missing bytecode)
-                var classExport = asset.GetClassExport();
-                var oldJsons = asset.Exports
+                KismetSerializer.asset = oldAsset;
+                var oldClassExport = oldAsset.GetClassExport();
+                var oldJsons = oldAsset.Exports
                     .Where(x => x is FunctionExport)
                     .Cast<FunctionExport>()
-                    .OrderBy(x => classExport?.FuncMap?.IndexOf(x.ObjectName) ?? -1)
+                    .OrderBy(x => oldClassExport?.FuncMap?.IndexOf(x.ObjectName) ?? -1)
                     .Select(x =>
                     {
                         var bc = x.ScriptBytecode ?? Array.Empty<UAssetAPI.Kismet.Bytecode.KismetExpression>();
@@ -38,14 +50,18 @@ namespace UAssetStudio.Cli.CMD
                         return (x.ObjectName.ToString(), json);
                     });
 
-                // New: functions from compiled script
-                var newJsons = script.Classes
-                    .SelectMany(x => x.Functions)
+                // New: functions from newly linked asset
+                KismetSerializer.asset = newAsset;
+                var newClassExport = newAsset.GetClassExport();
+                var newJsons = newAsset.Exports
+                    .Where(x => x is FunctionExport)
+                    .Cast<FunctionExport>()
+                    .OrderBy(x => newClassExport?.FuncMap?.IndexOf(x.ObjectName) ?? -1)
                     .Select(x =>
                     {
-                        var bc = (x.Bytecode ?? new List<UAssetAPI.Kismet.Bytecode.KismetExpression>()).ToArray();
+                        var bc = x.ScriptBytecode ?? Array.Empty<UAssetAPI.Kismet.Bytecode.KismetExpression>();
                         var json = JsonConvert.SerializeObject(KismetSerializer.SerializeScript(bc), Formatting.Indented);
-                        return (x.Symbol.Name, json);
+                        return (x.ObjectName.ToString(), json);
                     });
 
                 var oldJsonText = string.Join("\n", oldJsons);
@@ -54,21 +70,14 @@ namespace UAssetStudio.Cli.CMD
                 File.WriteAllText("old.json", oldJsonText);
                 File.WriteAllText("new.json", newJsonText);
 
-                if (oldJsonText != newJsonText)
-                {
-                    Console.WriteLine($"Verification failed: {fileName}");
-                }
-                else
-                {
-                    Console.WriteLine($"Verification passed: {fileName}");
-                }
+                Assert.AreEqual(oldJsonText, newJsonText);
+                Console.WriteLine($"Verification passed: {fileName}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Warn] Old/New verification skipped: {ex.GetType().Name}: {ex.Message}");
             }
         }
-        // Removed unused verification helper requiring non-existent UnrealPackage type
 
         internal static UAsset LoadAsset(EngineVersion ueVersion, string? mappings, string assetPath)
         {

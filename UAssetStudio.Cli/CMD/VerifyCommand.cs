@@ -37,12 +37,10 @@ namespace UAssetStudio.Cli.CMD
                 CliHelpers.DecompileToKms(asset, kmsPath);
 
                 UAsset newAsset;
-                CompiledScriptContext? scriptCtx = null;
                 try
                 {
                     // 2) Compile .kms back
                     var script = CliHelpers.CompileKms(kmsPath, ver);
-                    scriptCtx = script;
 
                     // 3) Link compiled script into asset
                     newAsset = new UAssetLinker(asset)
@@ -55,15 +53,12 @@ namespace UAssetStudio.Cli.CMD
                     newAsset = asset; // Fallback: write original asset to ensure end-to-end verify completes
                 }
 
-                // 4) Optional: set serializer asset for downstream tooling/inspection
-                KismetSerializer.asset = newAsset;
-
                 // 5) Write .new.uasset
                 var outFile = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(assetPath, ".new.uasset")));
                 newAsset.Write(outFile);
 
-                // 6) Old vs new verification (when compilation succeeded)
-                CliHelpers.VerifyOldAndNew(assetPath, asset, scriptCtx!);
+                // 6) Old vs new verification: compare full JSON via file paths
+                CliHelpers.VerifyOldAndNew(assetPath, outFile, ver, mapPath);
                 Console.WriteLine($"Verified: {assetPath} -> {kmsPath} -> {outFile}");
 
             }, ueVersion, mappings, verify.Arguments[0] as Argument<string>, verify.Options[0] as Option<string?>);
