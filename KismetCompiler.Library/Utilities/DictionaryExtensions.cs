@@ -1,8 +1,9 @@
-﻿namespace KismetCompiler.Library.Utilities;
+namespace KismetCompiler.Library.Utilities;
 
 public static class DictionaryExtensions
 {
     public static Dictionary<TValue, TKey> Reverse<TKey, TValue>(this IDictionary<TKey, TValue> source)
+        where TValue : notnull
     {
         var dictionary = new Dictionary<TValue, TKey>();
         foreach (var entry in source)

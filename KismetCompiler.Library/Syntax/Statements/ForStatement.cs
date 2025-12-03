@@ -1,14 +1,14 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class ForStatement : Statement, IBlockStatement
 {
-    public Statement Initializer { get; set; }
+    public Statement Initializer { get; set; } = null!;
 
-    public Expression Condition { get; set; }
+    public Expression Condition { get; set; } = null!;
 
-    public Expression AfterLoop { get; set; }
+    public Expression AfterLoop { get; set; } = null!;
 
-    public CompoundStatement Body { get; set; }
+    public CompoundStatement Body { get; set; } = null!;
 
     IEnumerable<CompoundStatement> IBlockStatement.Blocks => new[] { Body }.Where(x => x != null);
 

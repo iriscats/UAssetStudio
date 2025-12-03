@@ -1,10 +1,10 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements;
+namespace KismetCompiler.Library.Syntax.Statements;
 
 public class WhileStatement : Statement, IBlockStatement
 {
-    public Expression Condition { get; set; }
+    public Expression Condition { get; set; } = null!;
 
-    public CompoundStatement Body { get; set; }
+    public CompoundStatement Body { get; set; } = null!;
 
     IEnumerable<CompoundStatement> IBlockStatement.Blocks => new[] { Body }.Where(x => x != null);
 

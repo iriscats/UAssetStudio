@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Syntax.Statements.Declarations;
+using KismetCompiler.Library.Syntax.Statements.Declarations;
 using KismetCompiler.Library.Syntax.Statements.Expressions;
 
 namespace KismetCompiler.Library.Syntax.Statements;
@@ -9,7 +9,7 @@ public abstract class Declaration : Statement
 
     public DeclarationType DeclarationType { get; }
 
-    public Identifier Identifier { get; set; }
+    public Identifier Identifier { get; set; } = null!;
 
     protected Declaration(DeclarationType type)
     {

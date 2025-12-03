@@ -1,11 +1,11 @@
-﻿using UAssetAPI.Kismet.Bytecode;
+using UAssetAPI.Kismet.Bytecode;
 
 namespace KismetCompiler.Library.Utilities;
 
 public record KismetExpressionContext<T>(
     KismetExpression Expression,
     int CodeStartOffset,
-    T Tag)
+    T? Tag)
 {
     public int? CodeEndOffset { get; set; }
 }

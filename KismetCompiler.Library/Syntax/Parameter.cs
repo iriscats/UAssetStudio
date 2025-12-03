@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Syntax.Statements;
+using KismetCompiler.Library.Syntax.Statements;
 using KismetCompiler.Library.Syntax.Statements.Expressions;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
 using KismetCompiler.Library.Syntax.Statements.Expressions.Literals;
@@ -10,12 +10,12 @@ public class Parameter : SyntaxNode
     public List<Statements.Declarations.AttributeDeclaration> Attributes { get; init; } = new();
     public ParameterModifier Modifier { get; set; }
 
-    public TypeIdentifier Type { get; set; }
+    public TypeIdentifier Type { get; set; } = null!;
 
-    public Identifier Identifier { get; set; }
+    public Identifier Identifier { get; set; } = null!;
 
     public virtual bool IsArray => false;
-    public Expression DefaultVaue { get; set; }
+    public Expression? DefaultVaue { get; set; }
 
     public bool IsVarArgs { get; set; }
 
@@ -39,7 +39,7 @@ public class Parameter : SyntaxNode
 
 public class ArrayParameter : Parameter
 {
-    public IntLiteral Size { get; set; }
+    public IntLiteral Size { get; set; } = null!;
 
     public override bool IsArray => true;
 
@@ -48,7 +48,7 @@ public class ArrayParameter : Parameter
 
     }
 
-    public ArrayParameter(ParameterModifier modifier, TypeIdentifier type, Identifier identifier, IntLiteral size) : base(modifier, type, identifier, null)
+    public ArrayParameter(ParameterModifier modifier, TypeIdentifier type, Identifier identifier, IntLiteral size) : base(modifier, type, identifier, default(Expression?))
     {
         Size = size;
     }

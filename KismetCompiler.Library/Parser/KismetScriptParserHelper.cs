@@ -1,28 +1,28 @@
-﻿using Antlr4.Runtime;
+using Antlr4.Runtime;
 
 namespace KismetCompiler.Library.Parser;
 
 public static class KismetScriptParserHelper
 {
-    public static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(string input, IAntlrErrorListener<IToken> errorListener = null)
+    public static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(string input, IAntlrErrorListener<IToken>? errorListener = null)
     {
         var inputStream = new AntlrInputStream(input);
         return ParseCompilationUnit(inputStream, errorListener);
     }
 
-    public static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(TextReader input, IAntlrErrorListener<IToken> errorListener = null)
+    public static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(TextReader input, IAntlrErrorListener<IToken>? errorListener = null)
     {
         var inputStream = new AntlrInputStream(input);
         return ParseCompilationUnit(inputStream, errorListener);
     }
 
-    public static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(Stream input, IAntlrErrorListener<IToken> errorListener = null)
+    public static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(Stream input, IAntlrErrorListener<IToken>? errorListener = null)
     {
         var inputStream = new AntlrInputStream(input);
         return ParseCompilationUnit(inputStream, errorListener);
     }
 
-    private static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(AntlrInputStream inputStream, IAntlrErrorListener<IToken> errorListener = null)
+    private static KismetScriptParser.CompilationUnitContext ParseCompilationUnit(AntlrInputStream inputStream, IAntlrErrorListener<IToken>? errorListener = null)
     {
         var lexer = new KismetScriptLexer(inputStream);
         var tokenStream = new CommonTokenStream(lexer);

@@ -1,4 +1,4 @@
-﻿namespace KismetCompiler.Library.Syntax.Statements.Expressions;
+namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public enum MemberExpressionKind
 {
@@ -8,9 +8,9 @@ public enum MemberExpressionKind
 
 public class MemberExpression : Expression, IOperator
 {
-    public Expression Context { get; set; }
+    public Expression Context { get; set; } = null!;
 
-    public Expression Member { get; set; }
+    public Expression Member { get; set; } = null!;
 
     public MemberExpressionKind Kind { get; set; }
 

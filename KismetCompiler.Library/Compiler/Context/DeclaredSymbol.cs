@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Compiler.Exceptions;
+using KismetCompiler.Library.Compiler.Exceptions;
 using KismetCompiler.Library.Syntax;
 using KismetCompiler.Library.Syntax.Statements;
 using KismetCompiler.Library.Syntax.Statements.Declarations;
@@ -149,7 +149,7 @@ namespace KismetCompiler.Library.Compiler.Context
 
         public required string Name { get; init; }
         public required bool IsExternal { get; init; }
-        public virtual Declaration Declaration { get; }
+        public virtual Declaration? Declaration { get; }
         public IReadOnlyList<Symbol> Members => _members;
         public IReadOnlyList<Symbol> Inheritors => _inheritors;
         public IReadOnlyList<Symbol> UsedBy => _usedBy;
@@ -191,9 +191,9 @@ namespace KismetCompiler.Library.Compiler.Context
 
     public abstract class DeclaredSymbol<T> : Symbol where T : Declaration
     {
-        public override T Declaration { get; }
+        public override T? Declaration { get; }
 
-        public DeclaredSymbol(T declaration)
+        public DeclaredSymbol(T? declaration)
         {
             Declaration = declaration;
         }
@@ -210,7 +210,7 @@ namespace KismetCompiler.Library.Compiler.Context
 
     public class VariableSymbol : DeclaredSymbol<VariableDeclaration>, IExportSymbol
     {
-        public VariableSymbol(VariableDeclaration declaration) : base(declaration)
+        public VariableSymbol(VariableDeclaration? declaration) : base(declaration)
         {
         }
 
@@ -248,7 +248,7 @@ namespace KismetCompiler.Library.Compiler.Context
 
     public class ClassSymbol : DeclaredSymbol<ClassDeclaration>, IExportSymbol
     {
-        public ClassSymbol(ClassDeclaration declaration) : base(declaration)
+        public ClassSymbol(ClassDeclaration? declaration) : base(declaration)
         {
         }
 
@@ -256,12 +256,12 @@ namespace KismetCompiler.Library.Compiler.Context
 
         public bool IsInterface { get; internal set; }
 
-        public bool IsStatic => Declaration.Modifiers.HasFlag(ClassModifiers.Static);
+        public bool IsStatic => Declaration?.Modifiers.HasFlag(ClassModifiers.Static) ?? false;
     }
 
     public class EnumSymbol : DeclaredSymbol<EnumDeclaration>, IExportSymbol
     {
-        public EnumSymbol(EnumDeclaration declaration) : base(declaration)
+        public EnumSymbol(EnumDeclaration? declaration) : base(declaration)
         {
         }
 
@@ -270,7 +270,7 @@ namespace KismetCompiler.Library.Compiler.Context
 
     public class EnumValueSymbol : DeclaredSymbol<EnumValueDeclaration>, IExportSymbol
     {
-        public EnumValueSymbol(EnumValueDeclaration declaration) : base(declaration)
+        public EnumValueSymbol(EnumValueDeclaration? declaration) : base(declaration)
         {
         }
 
@@ -281,7 +281,7 @@ namespace KismetCompiler.Library.Compiler.Context
 
     public class ProcedureSymbol : DeclaredSymbol<ProcedureDeclaration>, IExportSymbol
     {
-        public ProcedureSymbol(ProcedureDeclaration declaration) : base(declaration)
+        public ProcedureSymbol(ProcedureDeclaration? declaration) : base(declaration)
         {
         }
 
@@ -309,7 +309,7 @@ namespace KismetCompiler.Library.Compiler.Context
 
     public class LabelSymbol : DeclaredSymbol<LabelDeclaration>
     {
-        public LabelSymbol(LabelDeclaration declaration) : base(declaration)
+        public LabelSymbol(LabelDeclaration? declaration) : base(declaration)
         {
         }
 

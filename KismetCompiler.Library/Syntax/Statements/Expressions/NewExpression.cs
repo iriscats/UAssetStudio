@@ -1,10 +1,10 @@
-﻿using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
+using KismetCompiler.Library.Syntax.Statements.Expressions.Identifiers;
 
 namespace KismetCompiler.Library.Syntax.Statements.Expressions;
 
 public class NewExpression : Expression
 {
-    public TypeIdentifier TypeIdentifier { get; set; }
+    public TypeIdentifier TypeIdentifier { get; set; } = null!;
     public bool IsArray { get; set; }
     public int ArrayLength { get; set; }
     public List<Expression> Initializer { get; set; } = new();
