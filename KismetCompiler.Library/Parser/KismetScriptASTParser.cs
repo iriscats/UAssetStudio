@@ -1,4 +1,4 @@
-﻿using Antlr4.Runtime;
+using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using System.Globalization;
 using System.Diagnostics;
@@ -530,7 +530,6 @@ public class KismetScriptASTParser
         }
 
         // Parse return type
-        int identifierIndex = 0;
         if (!TryGet(context, "Expected function return type", context.typeIdentifier, out var typeIdentifierNode))
         {
             return false;
