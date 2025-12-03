@@ -288,7 +288,7 @@ public class Symbol
     {
         Debug.Assert(Super != this && PropertyClass != this && InterfaceClass != this && Struct != this && Class != this);
 
-        return Children.Where(x => x.ImportIndex?.Index == index.Index || x.ExportIndex?.Index == index.Index).SingleOrDefault()
+        return Children.Where(x => x.ImportIndex?.Index == index.Index || x.ExportIndex?.Index == index.Index).FirstOrDefault()
             ?? Super?.GetMember(index)
             ?? PropertyClass?.GetMember(index)
             ?? InterfaceClass?.GetMember(index)
@@ -300,7 +300,7 @@ public class Symbol
     {
         Debug.Assert(Super != this && PropertyClass != this && InterfaceClass != this && Struct != this && Class != this);
 
-        return Children.Where(x => x.Name == name).SingleOrDefault()
+        return Children.Where(x => x.Name == name).FirstOrDefault()
             ?? Super?.GetMember(name)
             ?? PropertyClass?.GetMember(name)
             ?? InterfaceClass?.GetMember(name)

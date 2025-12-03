@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Syntax;
+using KismetCompiler.Library.Syntax;
 using KismetCompiler.Library.Syntax.Statements;
 using KismetCompiler.Library.Syntax.Statements.Declarations;
 using KismetCompiler.Library.Syntax.Statements.Expressions;
@@ -187,14 +187,11 @@ public class TypeResolver
     {
         if (!Scope.TryRegisterDeclarationLocally(declaration))
         {
-            // Special case: forward declared declarations on top level
-            //if (Scope.Parent != null)
-            //{
-            //    Scope.TryGetDeclaration(declaration.Identifier, out var existingDeclaration);
-            //    LogError($"Identifier {declaration.Identifier} already defined as: {existingDeclaration}");
-            //    return false;
-            //}
-            throw new TypeAnalysisError(declaration, "Failed to register declaration");
+            // Allow duplicate identifiers by keeping the first declaration in scope.
+            // This avoids crashing on decompiled assets that redundantly declare imports or stubs.
+            var name = declaration.Identifier.Text;
+            Debug.WriteLine($"[TypeResolver] Duplicate identifier '{name}' ignored in current scope.");
+            return;
         }
     }
 
@@ -237,10 +234,13 @@ public class TypeResolver
 
     private void ResolveTypesInClassDeclaration(ClassDeclaration classDeclaration)
     {
+        // Enter a new scope for class members to avoid identifier collisions
+        PushScope();
         foreach (var decl in classDeclaration.Declarations)
         {
             ResolveTypesInDeclaration(decl);
         }
+        PopScope();
     }
 
     internal void ResolveTypesInExpression(Expression expression)

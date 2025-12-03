@@ -408,13 +408,19 @@ public partial class KismetDecompiler
             .Where(x => x is PropertyExport)
             .Select(x => (IPropertyData)new PropertyExportData((PropertyExport)x))
             .Union(function.LoadedProperties.Select(x => new FPropertyData(_asset, x)))
+            // Deduplicate by property name to avoid repeated local declarations
+            .GroupBy(x => x.Name)
+            .Select(g => g.First())
             .ToList();
 
         var functionParams = functionProperties
             .Where(x => (x.PropertyFlags & EPropertyFlags.CPF_Parm) != 0);
 
         var functionLocals = functionProperties
-            .Except(functionParams);
+            .Except(functionParams)
+            .GroupBy(x => x.Name)
+            .Select(g => g.First())
+            .ToList();
 
 
         var functionParameterText =
