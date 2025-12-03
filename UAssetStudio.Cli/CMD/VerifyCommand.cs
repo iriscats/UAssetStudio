@@ -58,7 +58,7 @@ namespace UAssetStudio.Cli.CMD
                 newAsset.Write(outFile);
 
                 // 6) Old vs new verification: compare full JSON via file paths
-                CliHelpers.VerifyOldAndNew(assetPath, outFile, ver, mapPath);
+                CliHelpers.VerifyOldAndNewExport(assetPath, outFile, ver, mapPath);
                 Console.WriteLine($"Verified: {assetPath} -> {kmsPath} -> {outFile}");
 
             }, ueVersion, mappings, verify.Arguments[0] as Argument<string>, verify.Options[0] as Option<string?>);

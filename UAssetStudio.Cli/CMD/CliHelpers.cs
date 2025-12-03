@@ -32,10 +32,13 @@ namespace UAssetStudio.Cli.CMD
             Assert.AreEqual(oldJsonText, newJsonText);
         }
 
-        internal static void VerifyOldAndNewExport(string fileName, UAsset oldAsset, UAsset newAsset)
+        internal static void VerifyOldAndNewExport(string oldAssetPath, string newAssetPath, EngineVersion ueVersion, string? mappings)
         {
             try
             {
+                var oldAsset = LoadAsset(ueVersion, mappings, oldAssetPath);
+                var newAsset = LoadAsset(ueVersion, mappings, newAssetPath);
+
                 // Old: functions from original asset (tolerate missing bytecode)
                 KismetSerializer.asset = oldAsset;
                 var oldClassExport = oldAsset.GetClassExport();
@@ -71,7 +74,7 @@ namespace UAssetStudio.Cli.CMD
                 File.WriteAllText("new.json", newJsonText);
 
                 Assert.AreEqual(oldJsonText, newJsonText);
-                Console.WriteLine($"Verification passed: {fileName}");
+                Console.WriteLine($"Verification passed");
             }
             catch (Exception ex)
             {
