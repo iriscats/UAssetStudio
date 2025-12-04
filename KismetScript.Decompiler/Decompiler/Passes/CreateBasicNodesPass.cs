@@ -2,7 +2,7 @@ using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using KismetCompiler.Library.Decompiler.Context;
-using Kismet.Compiler.Utilities;
+using KismetScript.Utilities;
 
 namespace KismetCompiler.Library.Decompiler.Passes
 {

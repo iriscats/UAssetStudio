@@ -12,7 +12,7 @@ using KismetScript.Syntax.Statements.Expressions.Literals;
 using KismetScript.Syntax.Statements.Expressions.Identifiers;
 using static KismetScript.Parser.Parser.KismetScriptParser;
 using KismetScript.Parser.Parser;
-using KismetScript.Parser.Utilities;
+using KismetScript.Utilities;
 
 namespace KismetScript.Parser;
 

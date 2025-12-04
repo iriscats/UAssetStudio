@@ -1,6 +1,6 @@
 namespace KismetScript.Syntax;
 
-internal static class KeywordDictionary
+public static class KeywordDictionary
 {
     private static readonly Dictionary<ValueKind, string> _valueTypeToKeyword = new()
     {
@@ -22,6 +22,18 @@ internal static class KeywordDictionary
         { "string", ValueKind.String }
     };
 
+    private static readonly Dictionary<VariableModifier, string> _modifierTypeToKeyword = new()
+    {
+        { VariableModifier.Const, "const" },
+    };
+
+    private static readonly Dictionary<string, VariableModifier> _keywordToModifierType = new()
+    {
+        { "const", VariableModifier.Const },
+    };
+
     public static IReadOnlyDictionary<ValueKind, string> ValueTypeToKeyword => _valueTypeToKeyword;
     public static IReadOnlyDictionary<string, ValueKind> KeywordToValueType => _keywordToValueType;
+    public static IReadOnlyDictionary<VariableModifier, string> ModifierTypeToKeyword => _modifierTypeToKeyword;
+    public static IReadOnlyDictionary<string, VariableModifier> KeywordToModifierType => _keywordToModifierType;
 }

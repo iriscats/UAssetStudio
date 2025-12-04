@@ -1,8 +1,8 @@
-﻿using UAssetAPI.ExportTypes;
+using UAssetAPI.ExportTypes;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using Kismet.Compiler.Utilities;
+using KismetScript.Utilities;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using KismetCompiler.Library.Decompiler.Analysis;
 

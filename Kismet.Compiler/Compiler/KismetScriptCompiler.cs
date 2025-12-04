@@ -14,7 +14,7 @@ using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 using Kismet.Compiler.Compiler.Intermediate;
 using KismetScript.Syntax.Statements.Expressions.Binary;
-using Kismet.Compiler.Utilities;
+using KismetScript.Utilities;
 using Kismet.Compiler.Compiler.Frontend;
 
 namespace Kismet.Compiler.Compiler;

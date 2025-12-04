@@ -1,26 +1,12 @@
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using System.CodeDom.Compiler;
-using static Kismet.Compiler.Utilities.KismetExpressionVisitor;
 
-namespace Kismet.Compiler.Utilities;
+namespace KismetScript.Utilities;
 
-public abstract class KismetExpressionVisitor : KismetExpressionVisitor<VisitorContext>
+public static class KismetExpressionSizeCalculator2
 {
-    public class VisitorContext { }
-}
-
-public abstract class KismetExpressionVisitor<T>
-{
-    private Stack<KismetExpression> _parentStack = new();
-
-    public ObjectVersionUE5 ObjectVersionUE5 { get; init; } = ObjectVersionUE5.UNKNOWN;
-
-    public KismetExpression? ParentExpression
-        => _parentStack.Count == 0 ? null : _parentStack.Peek();
-
-    private static void CalculateStringExpressionSize(KismetExpression expr, ref int index)
+    public static void CalculateStringExpressionSize(KismetExpression expr, ref int index)
     {
         index++;
         switch (expr)
@@ -36,43 +22,21 @@ public abstract class KismetExpressionVisitor<T>
                     break;
                 }
             default:
-                throw new ArgumentException("Invalid expression type for calculating string size", nameof(expr));
+                break;
         }
     }
+    public static int CalculateExpressionSize(IEnumerable<KismetExpression> expressions, ObjectVersionUE5 objectVersionUE5 = 0)
+        => expressions.Sum(x => CalculateExpressionSize(x, objectVersionUE5));
 
-    protected virtual void OnEnter(KismetExpressionContext<T> context)
+    public static int CalculateExpressionSize(KismetExpression expression, ObjectVersionUE5 objectVersionUE5 = 0)
     {
-        _parentStack.Push(context.Expression);
+        var index = 0;
+        CalculateExpressionSize(expression, ref index, objectVersionUE5);
+        return index;
     }
 
-    protected virtual void OnExit(KismetExpressionContext<T> context)
+    public static void CalculateExpressionSize(KismetExpression expression, ref int codeOffset, ObjectVersionUE5 objectVersionUE5 = 0)
     {
-        _parentStack.Pop();
-    }
-
-    public int Visit(KismetExpression expression)
-    {
-        var codeOffset = 0;
-        Visit(expression, ref codeOffset);
-        return codeOffset;
-    }
-
-    public int Visit(IEnumerable<KismetExpression> expressions)
-    {
-        var codeOffset = 0;
-        foreach (var expression in expressions)
-        {
-            Visit(expression, ref codeOffset);
-        }
-        return codeOffset;
-    }
-
-    public virtual void Visit(KismetExpression expression, ref int codeOffset)
-    {
-        var codeStartOffset = codeOffset;
-        var ctx = new KismetExpressionContext<T>(expression, codeOffset, default);
-        OnEnter(ctx);
-
         codeOffset++;
         switch (expression)
         {
@@ -89,16 +53,16 @@ public abstract class KismetExpressionVisitor<T>
                         default:
                             break;
                     }
-                    Visit(exp.Target, ref codeOffset);
+                    CalculateExpressionSize(exp.Target, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_SetSet exp:
                 {
-                    Visit(exp.SetProperty, ref codeOffset);
+                    CalculateExpressionSize(exp.SetProperty, ref codeOffset, objectVersionUE5);
                     codeOffset += 4;
                     foreach (KismetExpression param in exp.Elements)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -109,19 +73,19 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 4;
                     foreach (KismetExpression param in exp.Elements)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
                 }
             case EX_SetMap exp:
                 {
-                    Visit(exp.MapProperty, ref codeOffset);
+                    CalculateExpressionSize(exp.MapProperty, ref codeOffset, objectVersionUE5);
                     codeOffset += 4;
                     for (var j = 1; j <= exp.Elements.Length / 2; j++)
                     {
-                        Visit(exp.Elements[2 * (j - 1)], ref codeOffset);
-                        Visit(exp.Elements[2 * (j - 1) + 1], ref codeOffset);
+                        CalculateExpressionSize(exp.Elements[2 * (j - 1)], ref codeOffset, objectVersionUE5);
+                        CalculateExpressionSize(exp.Elements[2 * (j - 1) + 1], ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -129,12 +93,11 @@ public abstract class KismetExpressionVisitor<T>
             case EX_MapConst exp:
                 {
                     codeOffset += 8;
-                    codeOffset += 8;
                     codeOffset += 4;
                     for (var j = 1; j <= exp.Elements.Length / 2; j++)
                     {
-                        Visit(exp.Elements[2 * (j - 1)], ref codeOffset);
-                        Visit(exp.Elements[2 * (j - 1) + 1], ref codeOffset);
+                        CalculateExpressionSize(exp.Elements[2 * (j - 1)], ref codeOffset, objectVersionUE5);
+                        CalculateExpressionSize(exp.Elements[2 * (j - 1) + 1], ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -142,62 +105,62 @@ public abstract class KismetExpressionVisitor<T>
             case EX_ObjToInterfaceCast exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.Target, ref codeOffset);
+                    CalculateExpressionSize(exp.Target, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_CrossInterfaceCast exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.Target, ref codeOffset);
+                    CalculateExpressionSize(exp.Target, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_InterfaceToObjCast exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.Target, ref codeOffset);
+                    CalculateExpressionSize(exp.Target, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_Let exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.Variable, ref codeOffset);
-                    Visit(exp.Expression, ref codeOffset);
+                    CalculateExpressionSize(exp.Variable, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.Expression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_LetObj exp:
                 {
-                    Visit(exp.VariableExpression, ref codeOffset);
-                    Visit(exp.AssignmentExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.VariableExpression, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.AssignmentExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_LetWeakObjPtr exp:
                 {
-                    Visit(exp.VariableExpression, ref codeOffset);
-                    Visit(exp.AssignmentExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.VariableExpression, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.AssignmentExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_LetBool exp:
                 {
-                    Visit(exp.VariableExpression, ref codeOffset);
-                    Visit(exp.AssignmentExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.VariableExpression, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.AssignmentExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_LetValueOnPersistentFrame exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.AssignmentExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.AssignmentExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_StructMemberContext exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.StructExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.StructExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_LetDelegate exp:
                 {
-                    Visit(exp.VariableExpression, ref codeOffset);
-                    Visit(exp.AssignmentExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.VariableExpression, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.AssignmentExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_LocalVirtualFunction exp:
@@ -205,7 +168,7 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 12;
                     foreach (KismetExpression param in exp.Parameters)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -215,20 +178,20 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 8;
                     foreach (KismetExpression param in exp.Parameters)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
                 }
             case EX_LetMulticastDelegate exp:
                 {
-                    Visit(exp.VariableExpression, ref codeOffset);
-                    Visit(exp.AssignmentExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.VariableExpression, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.AssignmentExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_ComputedJump exp:
                 {
-                    Visit(exp.CodeOffsetExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.CodeOffsetExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_Jump exp:
@@ -258,7 +221,7 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_InterfaceContext exp:
                 {
-                    Visit(exp.InterfaceValue, ref codeOffset);
+                    CalculateExpressionSize(exp.InterfaceValue, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_DeprecatedOp4A exp1:
@@ -276,7 +239,7 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_Return exp:
                 {
-                    Visit(exp.ReturnExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.ReturnExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_CallMath exp:
@@ -284,7 +247,7 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 8;
                     foreach (KismetExpression param in exp.Parameters)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -292,10 +255,10 @@ public abstract class KismetExpressionVisitor<T>
             case EX_CallMulticastDelegate exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.Delegate, ref codeOffset);
+                    CalculateExpressionSize(exp.Delegate, ref codeOffset, objectVersionUE5);
                     foreach (KismetExpression param in exp.Parameters)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -305,7 +268,7 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 8;
                     foreach (KismetExpression param in exp.Parameters)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -315,7 +278,7 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 12;
                     foreach (KismetExpression param in exp.Parameters)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -324,17 +287,17 @@ public abstract class KismetExpressionVisitor<T>
                 {
                     if (exp is EX_Context_FailSilent)
                     {
-                        exp = (EX_Context_FailSilent)exp;
+                        exp = exp as EX_Context_FailSilent;
                     }
                     else if (exp is EX_ClassContext)
                     {
-                        exp = (EX_ClassContext)exp;
+                        exp = exp as EX_ClassContext;
                     }
                     else { }
-                    Visit(exp.ObjectExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.ObjectExpression, ref codeOffset, objectVersionUE5);
                     codeOffset += 4;
                     codeOffset += 8;
-                    Visit(exp.ContextExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.ContextExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_IntConst exp:
@@ -407,7 +370,7 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_SoftObjectConst exp:
                 {
-                    Visit(exp.Value, ref codeOffset);
+                    CalculateExpressionSize(exp.Value, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_NameConst exp:
@@ -417,17 +380,17 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_RotationConst exp:
                 {
-                    codeOffset += (ObjectVersionUE5 >= ObjectVersionUE5.LARGE_WORLD_COORDINATES ? sizeof(double) : sizeof(float)) * 3;
+                    codeOffset += (objectVersionUE5 >= ObjectVersionUE5.LARGE_WORLD_COORDINATES ? sizeof(double) : sizeof(float)) * 3;
                     break;
                 }
             case EX_VectorConst exp:
                 {
-                    codeOffset += (ObjectVersionUE5 >= ObjectVersionUE5.LARGE_WORLD_COORDINATES ? sizeof(double) : sizeof(float)) * 3;
+                    codeOffset += (objectVersionUE5 >= ObjectVersionUE5.LARGE_WORLD_COORDINATES ? sizeof(double) : sizeof(float)) * 3;
                     break;
                 }
             case EX_TransformConst exp:
                 {
-                    codeOffset += (ObjectVersionUE5 >= ObjectVersionUE5.LARGE_WORLD_COORDINATES ? sizeof(double) : sizeof(float)) * 10;
+                    codeOffset += (objectVersionUE5 >= ObjectVersionUE5.LARGE_WORLD_COORDINATES ? sizeof(double) : sizeof(float)) * 10;
                     break;
                 }
             case EX_StructConst exp:
@@ -439,7 +402,7 @@ public abstract class KismetExpressionVisitor<T>
                     {
                         foreach (KismetExpression param in exp.Value)
                         {
-                            Visit(param, ref codeOffset);
+                            CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                             tempindex++;
                         }
                     }
@@ -448,19 +411,10 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_SetArray exp:
                 {
-                    // TODO
-                    // if (reader.Asset.ObjectVersion >= ObjectVersion.VER_UE4_CHANGE_SETARRAY_BYTECODE)
-                    if (exp.AssigningProperty != null)
-                    {
-                        Visit(exp.AssigningProperty, ref codeOffset);
-                    }
-                    else
-                    {
-                        codeOffset += 8;
-                    }
+                    CalculateExpressionSize(exp.AssigningProperty, ref codeOffset, objectVersionUE5);
                     foreach (KismetExpression param in exp.Elements)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -471,7 +425,7 @@ public abstract class KismetExpressionVisitor<T>
                     codeOffset += 4;
                     foreach (KismetExpression param in exp.Elements)
                     {
-                        Visit(param, ref codeOffset);
+                        CalculateExpressionSize(param, ref codeOffset, objectVersionUE5);
                     }
                     codeOffset++;
                     break;
@@ -498,31 +452,31 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_FieldPathConst exp:
                 {
-                    Visit(exp.Value, ref codeOffset);
+                    CalculateExpressionSize(exp.Value, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_MetaCast exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.TargetExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.TargetExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_DynamicCast exp:
                 {
                     codeOffset += 8;
-                    Visit(exp.TargetExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.TargetExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_JumpIfNot exp:
                 {
                     codeOffset += 4;
-                    Visit(exp.BooleanExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.BooleanExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_Assert exp:
                 {
                     codeOffset += 3;
-                    Visit(exp.AssertExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.AssertExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_InstanceDelegate exp:
@@ -532,26 +486,26 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_AddMulticastDelegate exp:
                 {
-                    Visit(exp.Delegate, ref codeOffset);
-                    Visit(exp.DelegateToAdd, ref codeOffset); // TODO: validate
+                    CalculateExpressionSize(exp.Delegate, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.DelegateToAdd, ref codeOffset, objectVersionUE5); // TODO: validate
                     break;
                 }
             case EX_RemoveMulticastDelegate exp:
                 {
-                    Visit(exp.Delegate, ref codeOffset);
-                    Visit(exp.DelegateToAdd, ref codeOffset);// TODO: validate
+                    CalculateExpressionSize(exp.Delegate, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.DelegateToAdd, ref codeOffset, objectVersionUE5);// TODO: validate
                     break;
                 }
             case EX_ClearMulticastDelegate exp:
                 {
-                    Visit(exp.DelegateToClear, ref codeOffset);
+                    CalculateExpressionSize(exp.DelegateToClear, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_BindDelegate exp:
                 {
                     codeOffset += 12;
-                    Visit(exp.Delegate, ref codeOffset);
-                    Visit(exp.ObjectTerm, ref codeOffset);
+                    CalculateExpressionSize(exp.Delegate, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.ObjectTerm, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_PushExecutionFlow exp:
@@ -565,7 +519,7 @@ public abstract class KismetExpressionVisitor<T>
                 }
             case EX_PopExecutionFlowIfNot exp:
                 {
-                    Visit(exp.BooleanExpression, ref codeOffset);
+                    CalculateExpressionSize(exp.BooleanExpression, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_Breakpoint exp:
@@ -630,20 +584,20 @@ public abstract class KismetExpressionVisitor<T>
             case EX_SwitchValue exp:
                 {
                     codeOffset += 6;
-                    Visit(exp.IndexTerm, ref codeOffset);
+                    CalculateExpressionSize(exp.IndexTerm, ref codeOffset, objectVersionUE5);
                     for (var j = 0; j < exp.Cases.Length; j++)
                     {
-                        Visit(exp.Cases[j].CaseIndexValueTerm, ref codeOffset);
+                        CalculateExpressionSize(exp.Cases[j].CaseIndexValueTerm, ref codeOffset, objectVersionUE5);
                         codeOffset += 4;
-                        Visit(exp.Cases[j].CaseTerm, ref codeOffset);
+                        CalculateExpressionSize(exp.Cases[j].CaseTerm, ref codeOffset, objectVersionUE5);
                     }
-                    Visit(exp.DefaultTerm, ref codeOffset);
+                    CalculateExpressionSize(exp.DefaultTerm, ref codeOffset, objectVersionUE5);
                     break;
                 }
             case EX_ArrayGetByRef exp:
                 {
-                    Visit(exp.ArrayVariable, ref codeOffset);
-                    Visit(exp.ArrayIndex, ref codeOffset);
+                    CalculateExpressionSize(exp.ArrayVariable, ref codeOffset, objectVersionUE5);
+                    CalculateExpressionSize(exp.ArrayIndex, ref codeOffset, objectVersionUE5);
                     break;
                 }
             default:
@@ -651,90 +605,5 @@ public abstract class KismetExpressionVisitor<T>
                     break;
                 }
         }
-
-        var codeEndOffset = codeOffset;
-        ctx.CodeEndOffset = codeEndOffset;
-        OnExit(ctx);
-    }
-}
-
-public static class KismetExpressionEnumerableExtensions
-{
-    private class Visitor : KismetExpressionVisitor<object>
-    {
-        private List<KismetExpression> _expressions = new();
-        public IReadOnlyList<KismetExpression> Expressions => _expressions;
-
-        protected override void OnEnter(KismetExpressionContext<object> context)
-        {
-            _expressions.Add(context.Expression);
-            base.OnEnter(context);
-        }
-    }
-
-    public static IEnumerable<KismetExpression> Flatten(this KismetExpression enumerable)
-    {
-        var visitor = new Visitor();
-        visitor.Visit(enumerable);
-        return visitor.Expressions;
-    }
-
-    public static IEnumerable<KismetExpression> Flatten(this IEnumerable<KismetExpression> enumerable)
-    {
-        var visitor = new Visitor();
-        visitor.Visit(enumerable);
-        return visitor.Expressions;
-    }
-}
-
-public static class KismetExpressionSizeCalculator
-{
-    private class KismetExpressionSizeCalculatorVisitor : KismetExpressionVisitor<object> { }
-
-    public static int CalculateExpressionSize(IEnumerable<KismetExpression> expressions, ObjectVersionUE5 objectVersionUE5 = 0)
-        => expressions.Sum(x => CalculateExpressionSize(x, objectVersionUE5));
-
-    public static int CalculateExpressionSize(KismetExpression expression, ObjectVersionUE5 objectVersionUE5 = 0)
-    {
-        var visitor = new KismetExpressionSizeCalculatorVisitor() { ObjectVersionUE5 = objectVersionUE5 };
-        return visitor.Visit(expression);
-    }
-}
-
-public static class KismetExpressionPrinter
-{
-    private class Visitor : KismetExpressionVisitor<object>
-    {
-        private IndentedTextWriter _writer;
-
-        public Visitor(TextWriter writer)
-        {
-            _writer = new(writer);
-        }
-
-        protected override void OnEnter(KismetExpressionContext<object> context)
-        {
-            _writer.WriteLine(context.Expression.Inst);
-            _writer.Indent++;
-        }
-
-        protected override void OnExit(KismetExpressionContext<object> context)
-        {
-            _writer.Indent--;
-        }
-    }
-
-    public static void Print(IEnumerable<KismetExpression> expressions)
-    {
-        foreach (var item in expressions)
-        {
-            Print(item);
-        }
-    }
-
-    public static void Print(KismetExpression expression)
-    {
-        var visitor = new Visitor(Console.Out);
-        visitor.Visit(expression);
     }
 }

@@ -7,7 +7,7 @@ using KismetCompiler.Library.Decompiler.Context.Nodes;
 using KismetCompiler.Library.Decompiler.Context.Properties;
 using KismetCompiler.Library.Decompiler.Passes;
 using KismetScript.Parser;
-using Kismet.Compiler.Utilities;
+using KismetScript.Utilities;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.Kismet.Bytecode;
