@@ -1,4 +1,4 @@
-namespace KismetScript.Parser.Utilities;
+namespace KismetScript.Utilities;
 
 public abstract class LogListener
 {

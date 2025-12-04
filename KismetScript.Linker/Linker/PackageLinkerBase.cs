@@ -1,7 +1,7 @@
 using Kismet.Compiler.Compiler;
 using Kismet.Compiler.Compiler.Context;
 using Kismet.Compiler.Compiler.Intermediate;
-using Kismet.Compiler.Utilities;
+using KismetScript.Utilities;
 using System.Text.RegularExpressions;
 using UAssetAPI;
 using UAssetAPI.CustomVersions;

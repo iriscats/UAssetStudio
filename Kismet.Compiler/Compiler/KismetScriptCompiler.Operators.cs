@@ -8,7 +8,7 @@ using KismetScript.Syntax.Statements.Expressions.Literals;
 using KismetScript.Syntax.Statements.Expressions.Unary;
 using Kismet.Compiler.Compiler.Context;
 using UAssetAPI.UnrealTypes;
-using Kismet.Compiler.Utilities;
+using KismetScript.Utilities;
 
 namespace Kismet.Compiler.Compiler;
 

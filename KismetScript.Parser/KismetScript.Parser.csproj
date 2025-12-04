@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\UAssetAPI\UAssetAPI\UAssetAPI.csproj" />
     <ProjectReference Include="..\KismetScript.Syntax\KismetScript.Syntax.csproj" />
+    <ProjectReference Include="..\KismetScript.Utilities\KismetScript.Utilities.csproj" />
   </ItemGroup>
 
   <ItemGroup>

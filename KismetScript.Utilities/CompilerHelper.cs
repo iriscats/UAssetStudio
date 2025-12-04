@@ -1,4 +1,4 @@
-namespace Kismet.Compiler.Utilities;
+namespace KismetScript.Utilities;
 
 public static class CompilerHelper
 {

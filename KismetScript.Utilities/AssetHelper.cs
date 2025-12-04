@@ -4,7 +4,7 @@ using UAssetAPI.FieldTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace Kismet.Compiler.Utilities;
+namespace KismetScript.Utilities;
 
 public static class AssetHelper
 {
