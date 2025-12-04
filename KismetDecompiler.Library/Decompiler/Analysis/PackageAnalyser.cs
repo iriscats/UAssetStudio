@@ -1,5 +1,5 @@
 using KismetCompiler.Library.Decompiler.Analysis.Visitors;
-using KismetCompiler.Library.Utilities;
+using Kismet.Compiler.Utilities;
 using System.Diagnostics;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;

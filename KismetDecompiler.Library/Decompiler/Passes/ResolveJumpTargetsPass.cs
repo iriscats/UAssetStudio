@@ -1,6 +1,6 @@
 using KismetCompiler.Library.Decompiler.Context;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
-using KismetCompiler.Library.Utilities;
+using Kismet.Compiler.Utilities;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;

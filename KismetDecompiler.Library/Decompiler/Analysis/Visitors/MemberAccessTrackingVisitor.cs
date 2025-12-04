@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Utilities;
+﻿using Kismet.Compiler.Utilities;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 
