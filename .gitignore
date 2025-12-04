@@ -56,3 +56,4 @@ nunit-*.xml
 .DS_Store
 .idea
 script/output
+.vs/
