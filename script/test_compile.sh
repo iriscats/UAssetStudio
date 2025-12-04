@@ -8,8 +8,8 @@ CLI_PROJ="$REPO_ROOT/UAssetStudio.Cli/UAssetStudio.Cli.csproj"
 OUTDIR="$REPO_ROOT/script/output"
 
 # Explicit KMS/script and original asset
-KMS_FILE="/Users/bytedance/Project/UAssetStudio/script/output/BP_PlayerControllerBase.kms"
-ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/output/BP_PlayerControllerBase.uasset"
+KMS_FILE="/Users/bytedance/Project/UAssetStudio/script/test_case_5_6/BP_PlayerControllerBase_backup.kms"
+ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/test_case_5_6/BP_PlayerControllerBase.uasset"
 
 # Optional: set to a valid UE5.6 .usmap if needed
 USMAP_PATH="/Users/bytedance/Project/RogueCore/DRG_RC_Mappings.usmap"
