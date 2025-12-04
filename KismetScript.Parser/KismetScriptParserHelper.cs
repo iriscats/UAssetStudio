@@ -1,6 +1,6 @@
 using Antlr4.Runtime;
 
-namespace KismetScript.Parser.Parser;
+namespace KismetScript.Parser;
 
 public static class KismetScriptParserHelper
 {

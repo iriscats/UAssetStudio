@@ -10,8 +10,6 @@ using KismetScript.Syntax.Statements.Expressions.Binary;
 using KismetScript.Syntax.Statements.Declarations;
 using KismetScript.Syntax.Statements.Expressions.Literals;
 using KismetScript.Syntax.Statements.Expressions.Identifiers;
-using static KismetScript.Parser.Parser.KismetScriptParser;
-using KismetScript.Parser.Parser;
 using KismetScript.Utilities;
 
 namespace KismetScript.Parser;

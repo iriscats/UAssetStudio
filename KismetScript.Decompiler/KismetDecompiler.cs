@@ -768,7 +768,7 @@ public partial class KismetDecompiler
     private string FormatIdentifier(string name, bool allowKeywords = false)
     {
         if (!IdentifierRegex().IsMatch(name) ||
-            (!allowKeywords && KismetScript.Parser.Parser.KismetScriptParser.IsKeyword(name)))
+            (!allowKeywords && KismetScriptParser.IsKeyword(name)))
             return $"`{name}`";
 
         return name;
