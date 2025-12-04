@@ -240,7 +240,8 @@ public class Program {
         p.WaitForExit();
 
         var assembly = Assembly.GetAssembly(typeof(Program))!;
-        var resourceName = $"{assembly.GetName().Name.Replace("-", "_")}.viz.embed.html";
+        var asmName = assembly.GetName().Name ?? "KismetAnalyzer_CFG";
+        var resourceName = $"{asmName.Replace("-", "_")}.viz.embed.html";
         var template = new StreamReader(assembly.GetManifestResourceStream(resourceName)!).ReadToEnd();
         var html = template.Replace("[DATA]", Convert.ToBase64String(Encoding.UTF8.GetBytes(svgData)));
 
@@ -305,7 +306,7 @@ public class Program {
             if (classExport != null) {
                 var parent = classExport.SuperStruct.ToImport(asset);
 
-                var assetPackage = Path.Join("/Game", Path.GetRelativePath(Path.Join(assetInputDir, projectName, "Content"), Path.GetDirectoryName(assetPath)), Path.GetFileNameWithoutExtension(assetPath));
+                var assetPackage = Path.Join("/Game", Path.GetRelativePath(Path.Join(assetInputDir, projectName, "Content"), Path.GetDirectoryName(assetPath) ?? string.Empty), Path.GetFileNameWithoutExtension(assetPath));
                 Console.WriteLine($"{assetPackage}.{classExport.ObjectName} : {parent.OuterIndex.ToImport(asset).ObjectName}.{parent.ObjectName}");
                 var fullClassName = $"{assetPackage}.{classExport.ObjectName}";
                 var fullParentName = $"{parent.OuterIndex.ToImport(asset).ObjectName}.{parent.ObjectName}";
@@ -380,8 +381,12 @@ public class Program {
 
         foreach (var index in imports) {
             var newIndex = Kismet.CopyImportTo((from, FPackageIndex.FromRawIndex(index)), to);
-            var i = newIndex.ToImport(to);
-            Console.WriteLine($"Copied import {index} => {newIndex}: {i.ClassName}, {i.ClassPackage}, {i.ObjectName}");
+            if (newIndex != null) {
+                var i = newIndex.ToImport(to);
+                Console.WriteLine($"Copied import {index} => {newIndex}: {i.ClassName}, {i.ClassPackage}, {i.ObjectName}");
+            } else {
+                Console.WriteLine($"Copied import {index} => null");
+            }
         }
 
         to.Write(assetDestination);
@@ -427,7 +432,8 @@ public class Program {
                             var isReturn = inst.GetType() == typeof(EX_Return);
                             if (isReturn ? keepReturn : true) {
                                 offset += (int) Kismet.GetSize(source, inst);
-                                newInst.Add(Kismet.CopyExpressionTo(inst, source, dest, fnSrc, fnDest));
+                        var copied = Kismet.CopyExpressionTo(inst, source, dest, fnSrc, fnDest);
+                        if (copied != null) newInst.Add(copied);
                             }
                             if (isReturn) break;
                         }

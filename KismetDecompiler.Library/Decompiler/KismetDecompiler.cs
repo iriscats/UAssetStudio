@@ -229,7 +229,7 @@ public partial class KismetDecompiler
                     }
                     else if (isInsideClassDecl)
                     {
-                        _writer.WriteLine($"public {FormatIdentifier(symbol.Class?.Name)} {FormatIdentifier(symbol.Name!)};");
+                        _writer.WriteLine($"public {FormatIdentifier(symbol.Class?.Name ?? string.Empty)} {FormatIdentifier(symbol.Name!)};");
                         if (!importQueue.Any(x => x.Name == symbol.Name))
                             importQueue.Enqueue(symbol);
                     }
