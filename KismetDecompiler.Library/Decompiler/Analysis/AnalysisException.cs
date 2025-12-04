@@ -1,8 +1,7 @@
-﻿using System.Runtime.Serialization;
+using System.Runtime.Serialization;
 
 namespace KismetCompiler.Library.Decompiler.Analysis
 {
-    [Serializable]
     public class AnalysisException : Exception
     {
         public AnalysisException()
@@ -17,8 +16,5 @@ namespace KismetCompiler.Library.Decompiler.Analysis
         {
         }
 
-        protected AnalysisException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

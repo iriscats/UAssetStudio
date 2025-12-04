@@ -1,4 +1,4 @@
-﻿using KismetScript.Syntax;
+using KismetScript.Syntax;
 using KismetScript.Syntax.Statements;
 using KismetScript.Syntax.Statements.Declarations;
 using KismetScript.Syntax.Statements.Expressions;
@@ -35,7 +35,7 @@ public class CompilationUnitWriter
         private readonly TextWriter mWriter;
         private int mTabLevel;
         private bool mInsideLine;
-        private ProcedureDeclaration mProcedure;
+        private ProcedureDeclaration mProcedure = null!;
         private readonly bool mOwnsWriter;
 
         private readonly Stack<bool> mSuppressIfStatementNewLine;
@@ -337,7 +337,7 @@ public class CompilationUnitWriter
         {
             if (statement.Value == null)
             {
-                if (statement != mProcedure.Body.Last())
+                if (mProcedure.Body != null && statement != mProcedure.Body.LastOrDefault())
                 {
                     WriteIndented("return");
                     WriteStatementEnd();

@@ -8,10 +8,12 @@ namespace UAssetStudio.Cli.CMD
     {
         internal static Command Create(Option<EngineVersion> ueVersion, Option<string?> mappings)
         {
+            var assetArg = new Argument<string>("asset", description: "Path to asset (.uasset/.umap)");
+            var outdirOpt = new Option<string?>("--outdir", description: "Output directory; default = asset directory");
             var decompile = new Command("decompile", "Decompile .uasset/.umap to .kms")
             {
-                new Argument<string>("asset", description: "Path to asset (.uasset/.umap)"),
-                new Option<string?>("--outdir", description: "Output directory; default = asset directory")
+                assetArg,
+                outdirOpt
             };
 
             decompile.AddOption(ueVersion);
@@ -24,7 +26,7 @@ namespace UAssetStudio.Cli.CMD
                 var kmsPath = Path.Join(dir, Path.ChangeExtension(Path.GetFileName(assetPath), ".kms"));
                 CliHelpers.DecompileToKms(asset, kmsPath);
                 Console.WriteLine($"Decompiled: {assetPath} -> {kmsPath}");
-            }, ueVersion, mappings, decompile.Arguments[0] as Argument<string>, decompile.Options[0] as Option<string?>);
+            }, ueVersion, mappings, assetArg, outdirOpt);
 
             return decompile;
         }

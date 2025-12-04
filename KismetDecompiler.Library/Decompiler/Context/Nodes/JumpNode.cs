@@ -1,11 +1,11 @@
-﻿namespace KismetCompiler.Library.Decompiler.Context.Nodes;
+namespace KismetCompiler.Library.Decompiler.Context.Nodes;
 
 public class JumpNode : Node
 {
-    public Node Target { get; set; }
+    public Node Target { get; set; } = null!;
 
     public override string ToString()
     {
-        return $"{CodeStartOffset}: {Source.Inst} -> {Target}";
+        return $"{CodeStartOffset}: {Source?.Inst} -> {Target}";
     }
 }

@@ -1,11 +1,11 @@
-﻿using UAssetAPI.Kismet.Bytecode;
+using UAssetAPI.Kismet.Bytecode;
 
 namespace KismetCompiler.Library.Decompiler.Context.Nodes;
 
 public class Node
 {
-    public required Node Parent { get; set; }
-    public required KismetExpression Source { get; set; }
+    public Node? Parent { get; set; }
+    public KismetExpression? Source { get; set; }
     public required int CodeStartOffset { get; set; }
     public int CodeEndOffset { get; set; }
     public HashSet<Node> ReferencedBy { get; init; } = new();
@@ -18,6 +18,6 @@ public class Node
 
     public override string ToString()
     {
-        return $"{CodeStartOffset}: {Source.Inst} {string.Join(' ', Children.Select(x => x.ToString()))}";
+        return $"{CodeStartOffset}: {Source?.Inst} {string.Join(' ', Children.Select(x => x.ToString()))}";
     }
 }
