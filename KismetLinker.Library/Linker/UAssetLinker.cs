@@ -161,7 +161,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         return this;
     }
 
-    private void LinkCompiledFunction(CompiledFunctionContext functionContext)
+    protected override void LinkCompiledFunction(CompiledFunctionContext functionContext)
     {
         var classExport = functionContext.Symbol.DeclaringClass != null ?
             FindChildExport<ClassExport>(null, functionContext.Symbol!.DeclaringClass!.Name) :
@@ -190,7 +190,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             }
         }
 
-        functionExport.ScriptBytecode = GetFixedBytecode(functionContext.Bytecode);
+        functionExport!.ScriptBytecode = GetFixedBytecode(functionContext.Bytecode);
     }
 
     protected override FPackageIndex CreateProcedureImport(ProcedureSymbol symbol)
