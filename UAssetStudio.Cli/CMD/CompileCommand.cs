@@ -9,11 +9,14 @@ namespace UAssetStudio.Cli.CMD
     {
         internal static Command Create(Option<EngineVersion> ueVersion, Option<string?> mappings)
         {
+            var scriptArg = new Argument<string>("script", description: "Path to input .kms");
+            var assetOpt = new Option<string?>("--asset", description: "Original asset path (.uasset); defaults to script .uasset neighbor");
+            var outdirOpt = new Option<string?>("--outdir", description: "Output directory; default = script directory");
             var compile = new Command("compile", "Compile .kms to .uasset")
             {
-                new Argument<string>("script", description: "Path to input .kms"),
-                new Option<string?>("--asset", description: "Original asset path (.uasset); defaults to script .uasset neighbor"),
-                new Option<string?>("--outdir", description: "Output directory; default = script directory")
+                scriptArg,
+                assetOpt,
+                outdirOpt
             };
 
             compile.AddOption(ueVersion);
@@ -43,7 +46,7 @@ namespace UAssetStudio.Cli.CMD
                 var outFile = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(scriptPath, ".compiled.uasset")));
                 newAsset.Write(outFile);
                 Console.WriteLine($"Compiled: {scriptPath} -> {outFile}");
-            }, ueVersion, mappings, compile.Arguments[0] as Argument<string>, compile.Options[0] as Option<string?>, compile.Options[1] as Option<string?>);
+            }, ueVersion, mappings, scriptArg, assetOpt, outdirOpt);
 
             return compile;
         }

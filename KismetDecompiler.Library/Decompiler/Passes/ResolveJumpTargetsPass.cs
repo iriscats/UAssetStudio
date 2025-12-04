@@ -51,7 +51,9 @@ namespace KismetCompiler.Library.Decompiler.Passes
                                 break;
                             case EX_SwitchValue expr:
                                 {
-                                    jumpNode.Target = root!.Children.FirstOrDefault(x => x.CodeStartOffset == expr.EndGotoOffset);
+                                    var target = root!.Children.FirstOrDefault(x => x.CodeStartOffset == expr.EndGotoOffset);
+                                    if (target != null)
+                                        jumpNode.Target = target;
                                 }
                                 break;
                             case EX_PushExecutionFlow expr:

@@ -171,7 +171,7 @@ public class SummaryGenerator {
                     }
 
                     var node = new Node($"{e.ObjectName.ToString()}__{intr.Address.ToString()}");
-                    node.Attributes["label"] = $"{{{classExport.ObjectName.ToString()}::{e.ObjectName.ToString()}:{intr.Address.ToString()} | {LinesToField(intr.Content)}}}";
+                    node.Attributes["label"] = $"{{{(classExport?.ObjectName.ToString() ?? "")}::{e.ObjectName.ToString()}:{intr.Address.ToString()} | {LinesToField(intr.Content)}}}";
                     node.Attributes["shape"] = "record";
                     node.Attributes["style"] = "filled";
                     node.Attributes["fillcolor"] = "#eeeeee";
@@ -889,8 +889,6 @@ public class SummaryGenerator {
             default:
                 {
                     throw new NotImplementedException($"DBG missing expression {exp}");
-                    lines = new Lines("DBG missing expression " + exp); // TODO better error handling
-                    break;
                 }
         }
         return lines;
@@ -970,6 +968,6 @@ public class SummaryGenerator {
     }
 
     static string ToString(FName[] arr) {
-        return "[" + String.Join(",", (object[]?)arr) + "]";
+        return "[" + String.Join(",", arr.Select(a => a.ToString())) + "]";
     }
 }

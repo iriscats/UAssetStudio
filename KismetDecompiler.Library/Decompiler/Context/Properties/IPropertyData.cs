@@ -1,4 +1,4 @@
-﻿using UAssetAPI;
+using UAssetAPI;
 using UAssetAPI.UnrealTypes;
 
 namespace KismetCompiler.Library.Decompiler.Context.Properties;
@@ -15,5 +15,5 @@ public interface IPropertyData
     string? PropertyClassName { get; }
     string? InterfaceClassName { get; }
     string? StructName { get; }
-    IPropertyData ArrayInnerProperty { get; }
+    IPropertyData? ArrayInnerProperty { get; }
 }

@@ -239,9 +239,9 @@ public class Program {
 
         p.WaitForExit();
 
-        var assembly = Assembly.GetAssembly(typeof(Program));
+        var assembly = Assembly.GetAssembly(typeof(Program))!;
         var resourceName = $"{assembly.GetName().Name.Replace("-", "_")}.viz.embed.html";
-        var template = new StreamReader(assembly.GetManifestResourceStream(resourceName)).ReadToEnd();
+        var template = new StreamReader(assembly.GetManifestResourceStream(resourceName)!).ReadToEnd();
         var html = template.Replace("[DATA]", Convert.ToBase64String(Encoding.UTF8.GetBytes(svgData)));
 
         using(StreamWriter writetext = new StreamWriter(outputPath)) {
@@ -310,7 +310,7 @@ public class Program {
                 var fullClassName = $"{assetPackage}.{classExport.ObjectName}";
                 var fullParentName = $"{parent.OuterIndex.ToImport(asset).ObjectName}.{parent.ObjectName}";
 
-                string relativePath = Path.GetRelativePath(assetInputDir, Path.GetDirectoryName(assetPath));
+                string relativePath = Path.GetRelativePath(assetInputDir, Path.GetDirectoryName(assetPath) ?? string.Empty);
                 string fileName = Path.ChangeExtension(Path.GetFileName(assetPath), ".html");
 
                 var classNode = new Node(fullClassName);
@@ -334,7 +334,7 @@ public class Program {
                 p2.Bar.Refresh(i++, $"CFGs... ({Path.GetFileName(assetPath)})");
                 Console.SetOut(p2.NullOut);
             }
-            var outputDir = Path.GetDirectoryName(Path.Join(output, "cfgs", Path.GetRelativePath(assetInputDir, assetPath)));
+            var outputDir = Path.GetDirectoryName(Path.Join(output, "cfgs", Path.GetRelativePath(assetInputDir, assetPath))) ?? ".";
             var outputPath = Path.Join(outputDir, Path.ChangeExtension(Path.GetFileName(assetPath), ".html"));
             Directory.CreateDirectory(outputDir);
 
@@ -360,7 +360,7 @@ public class Program {
 
             string jsonSerializedAsset = asset.SerializeJson(Newtonsoft.Json.Formatting.Indented);
             Console.WriteLine(outputPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
             File.WriteAllText(outputPath, jsonSerializedAsset);
         }
     }
@@ -591,7 +591,7 @@ public class Program {
                 }
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
             asset.Write(outputPath);
             Console.WriteLine(outputPath);
         }
@@ -623,7 +623,7 @@ public class Program {
                 }
             }
             if (type == "1P_Dwarf_Rig_Skeleton") {
-                Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
+                Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
                 asset.Write(outputPath);
                 Console.WriteLine(outputPath);
             }
@@ -812,7 +812,7 @@ public class Program {
                         var withExtension = $"{relPath}.uasset";
 
                         var outPath = Path.Join(OutputRemoveParticles, withExtension);
-                        Directory.CreateDirectory(Path.GetDirectoryName(outPath));
+                        Directory.CreateDirectory(Path.GetDirectoryName(outPath) ?? ".");
                         empty.Write(outPath);
 
                         var excludeWNT = false;
@@ -823,7 +823,7 @@ public class Program {
                         }
                         if (!excludeWNT) {
                             var outPathWNT = Path.Join(OutputRemoveParticlesButWeaponsNTools, withExtension);
-                            Directory.CreateDirectory(Path.GetDirectoryName(outPathWNT));
+                            Directory.CreateDirectory(Path.GetDirectoryName(outPathWNT) ?? ".");
                             empty.Write(outPathWNT);
                         }
 

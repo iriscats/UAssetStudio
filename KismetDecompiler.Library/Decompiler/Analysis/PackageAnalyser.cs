@@ -418,8 +418,6 @@ public partial class PackageAnalyser
                             .Union(exportSymbols)
                             .Union(inferredClassSymbols)
                             .GetSymbolByPackageIndex(interfaceProperty.InterfaceClass);
-                        if (interfaceProperty == null)
-                            throw new AnalysisException($"No symbol found for property class {_asset.GetName(interfaceProperty.InterfaceClass)}");
                         propertySymbol.InterfaceClass = interfaceClassSymbol;
                     }
                     if (property is FStructProperty structProperty)
@@ -433,8 +431,6 @@ public partial class PackageAnalyser
                             .Union(exportSymbols)
                             .Union(inferredClassSymbols)
                             .GetSymbolByPackageIndex(structProperty.Struct);
-                        if (structProperty == null)
-                            throw new AnalysisException($"No symbol found for property class {_asset.GetName(structProperty.Struct)}");
                         propertySymbol.Struct = structSymbol;
                     }
 

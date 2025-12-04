@@ -95,7 +95,7 @@ public class BlueprintGenerator {
     }
     public abstract class KismetNode {
         public abstract string Class { get; }
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public int NodePosX { get; set; }
         public int NodePosY { get; set; }
         public Guid NodeGuid { get; } = Guid.NewGuid();
@@ -125,7 +125,7 @@ public class BlueprintGenerator {
                 return "/Script/BlueprintGraph.K2Node_CallFunction";
             }
         }
-        public KismetFunctionReference FunctionReference { get; set; }
+        public KismetFunctionReference FunctionReference { get; set; } = null!;
         public override void WriteAttributes(TextWriter writer) {
             writer.Write($"    FunctionReference=(");
             FunctionReference.Write(writer);
@@ -163,8 +163,8 @@ public class BlueprintGenerator {
         }
     }
     public class KismetFunctionReference {
-        public string Parent { get; set; }
-        public string Name { get; set; }
+        public string Parent { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
 
         public void Write(TextWriter writer) {
             writer.Write($"MemberParent={Parent},");
@@ -173,7 +173,7 @@ public class BlueprintGenerator {
     }
     public class KismetPin {
         public Guid PinId { get; } = Guid.NewGuid();
-        public string PinName { get; set; }
+        public string PinName { get; set; } = string.Empty;
         public string? PinToolTip { get; set; }
         public KismetPinDirection Direction { get; set; } = KismetPinDirection.EGPD_Input;
         public KismetPinType PinType { get; set; }
@@ -224,8 +224,8 @@ public class BlueprintGenerator {
             PinCategory = "bool",
             PinSubCategory = "",
         };
-        public string PinCategory { get; set; }
-        public string PinSubCategory { get; set; }
+        public string PinCategory { get; set; } = string.Empty;
+        public string PinSubCategory { get; set; } = string.Empty;
         public object? PinSubCategoryObject { get; set; } = null;
         public IEnumerable<object> PinSubCategoryMemberReference { get; set; } = new List<object>();
         public IEnumerable<object> PinValueType { get; set; } = new List<object>();

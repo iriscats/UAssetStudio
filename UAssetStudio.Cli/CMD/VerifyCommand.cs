@@ -12,10 +12,12 @@ namespace UAssetStudio.Cli.CMD
     {
         internal static Command Create(Option<EngineVersion> ueVersion, Option<string?> mappings)
         {
+            var assetArg = new Argument<string>("asset", description: "Path to asset (.uasset/.umap)");
+            var outdirOpt = new Option<string?>("--outdir", description: "Output directory; default = asset directory");
             var verify = new Command("verify", "Decompile asset to .kms, recompile, link, and write .new.uasset")
             {
-                new Argument<string>("asset", description: "Path to asset (.uasset/.umap)"),
-                new Option<string?>("--outdir", description: "Output directory; default = asset directory")
+                assetArg,
+                outdirOpt
             };
 
             verify.AddOption(ueVersion);
@@ -52,7 +54,7 @@ namespace UAssetStudio.Cli.CMD
                 CliHelpers.VerifyOldAndNewExport(assetPath, outFile, ver, mapPath);
                 Console.WriteLine($"Verified: {assetPath} -> {kmsPath} -> {outFile}");
 
-            }, ueVersion, mappings, verify.Arguments[0] as Argument<string>, verify.Options[0] as Option<string?>);
+            }, ueVersion, mappings, assetArg, outdirOpt);
 
             return verify;
         }

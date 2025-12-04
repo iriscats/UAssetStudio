@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.FieldTypes;
@@ -14,8 +14,8 @@ public class Symbol
     private Symbol? _class;
     private Symbol? _super;
     private Symbol? _template;
-    private Symbol _superStruct;
-    private Symbol _innerClass;
+    private Symbol _superStruct = null!;
+    private Symbol _innerClass = null!;
     private Symbol? _propertyType;
 
     public Symbol? Parent
@@ -30,7 +30,7 @@ public class Symbol
         }
     }
     public IReadOnlyList<Symbol> Children => _children;
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
 
     public SymbolFlags Flags { get; set; }
     public SymbolType Type { get; set; }
@@ -41,8 +41,8 @@ public class Symbol
     public virtual Export? Export { get; set; }
     public FPackageIndex? ExportIndex { get; set; }
 
-    public FProperty FProperty { get; set; }
-    public UProperty UProperty { get; set; }
+    public FProperty FProperty { get; set; } = null!;
+    public UProperty UProperty { get; set; } = null!;
 
     public Symbol? Class
     {
@@ -280,7 +280,7 @@ public class Symbol
         }
         else
         {
-            return GetMember(pointer.New.Path[0].ToString());
+            return pointer.New != null && pointer.New.Path.Length > 0 ? GetMember(pointer.New.Path[0].ToString()) : null;
         }
     }
 

@@ -45,14 +45,12 @@ namespace KismetCompiler.Library.Decompiler.Passes
                         CodeStartOffset = context.CodeStartOffset,
                         Parent = parent,
                         Source = context.Expression,
-                        Target = null
                     },
                     EX_JumpIfNot or EX_PopExecutionFlowIfNot => new ConditionalJumpNode()
                     {
                         CodeStartOffset = context.CodeStartOffset,
                         Parent = parent,
                         Source = context.Expression,
-                        Target = null,
                         Inverted = true
                     },
                     _ => new Node()

@@ -144,7 +144,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
+                            ContextExpression = ActiveContext!,
                             ContextSymbol = ActiveContextSymbol,
                             MemberExpression = localVirtualFunction,
                             MemberSymbol = sym
@@ -174,7 +174,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                             };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
+                            ContextExpression = ActiveContext!,
                             ContextSymbol = ActiveContextSymbol,
                             MemberExpression = localFinalFunction,
                             MemberSymbol = sym
@@ -192,12 +192,12 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                 {
                     var sym = EnsurePropertySymbolCreated(defaultVariable.Variable);
 
-                    if (!ActiveContextSymbol.HasMember(sym))
+                    if (!ActiveContextSymbol.HasMember(sym!))
                     {
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol,
+                            ContextExpression = ActiveContext!,
+                            ContextSymbol = ActiveContextSymbol!,
                             MemberExpression = defaultVariable,
                             MemberSymbol = sym
                         });
@@ -210,11 +210,11 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                 {
                     var sym = EnsurePropertySymbolCreated(instanceVariable.Variable);
 
-                    if (!ActiveContextSymbol.HasMember(sym))
+                    if (!ActiveContextSymbol.HasMember(sym!))
                     {
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
+                            ContextExpression = ActiveContext!,
                             ContextSymbol = ActiveContextSymbol,
                             MemberExpression = instanceVariable,
                             MemberSymbol = sym
@@ -240,18 +240,18 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         //    structContext.
                         //}
 
-                        if (!structContext.HasMember(member))
+                        if (!structContext.HasMember(member!))
                         {
                             _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                             {
                                 ContextExpression = let.Variable,
-                                ContextSymbol = structContext,
+                                ContextSymbol = structContext!,
                                 MemberExpression = let,
                                 MemberSymbol = member
                             });
                         }
                     }
-                    _expressionSymbolCache[let] = member;
+                    _expressionSymbolCache[let] = member!;
                 }
                 break;
 
@@ -271,8 +271,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                             };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol,
+                            ContextExpression = ActiveContext!,
+                            ContextSymbol = ActiveContextSymbol!,
                             MemberExpression = callMulticastDelegate,
                             MemberSymbol = sym
                         });
@@ -301,8 +301,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol,
+                            ContextExpression = ActiveContext!,
+                            ContextSymbol = ActiveContextSymbol!,
                             MemberExpression = callMath,
                             MemberSymbol = sym
                         });
@@ -366,8 +366,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol,
+                            ContextExpression = ActiveContext!,
+                            ContextSymbol = ActiveContextSymbol!,
                             MemberExpression = finalFunction,
                             MemberSymbol = sym
                         });
@@ -387,8 +387,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         // but the base class has not been properly assigned to the context class yet
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol,
+                            ContextExpression = ActiveContext!,
+                            ContextSymbol = ActiveContextSymbol!,
                             MemberExpression = finalFunction,
                             MemberSymbol = sym
                         });
@@ -450,7 +450,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
                             ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol,
+                            ContextSymbol = ActiveContextSymbol!,
                             MemberExpression = virtualFunction,
                             MemberSymbol = sym
                         });
@@ -489,7 +489,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                     var contextSymbol = GetContextSymbolForExpression(context.ObjectExpression);
                     _contextStack.Push((context, contextSymbol));
                     Visit(context.ContextExpression);
-                    _expressionSymbolCache[context] = _expressionSymbolCache[context.ContextExpression];
+                    _expressionSymbolCache[context] = _expressionSymbolCache[context.ContextExpression!];
                     return;
                 }
         }

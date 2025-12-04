@@ -18,8 +18,8 @@ namespace KismetCompiler.Library.Decompiler.Passes
                 for (int j = i; j < r.Children.Count; j++)
                 {
                     if (r.Children[j] is JumpNode ||
-                        r.Children[j].Source.Token == EExprToken.EX_PushExecutionFlow ||
-                        r.Children[j].Source.Token == EExprToken.EX_EndOfScript)
+                        r.Children[j].Source?.Token == EExprToken.EX_PushExecutionFlow ||
+                        r.Children[j].Source?.Token == EExprToken.EX_EndOfScript)
                     {
                         // A jump has been found
                         end = j + 1;
@@ -37,6 +37,8 @@ namespace KismetCompiler.Library.Decompiler.Passes
                 var nodes = r.Children
                     .Skip(start)
                     .Take(end - start);
+                if (!nodes.Any())
+                    continue;
                 var blockNode = new BlockNode()
                 {
                     Source = null,

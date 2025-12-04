@@ -26,21 +26,21 @@ public partial class KismetDecompiler
 
     class Context
     {
-        public string Expression { get; set; }
+        public string Expression { get; set; } = string.Empty;
         public ContextType Type { get; set; }
     }
 
-    private UnrealPackage _asset;
-    private FunctionExport _function;
+    private UnrealPackage _asset = default!;
+    private FunctionExport _function = default!;
     
     private bool _useFullPropertyNames = false;
     private bool _useFullFunctionNames = false;
-    private FunctionState _functionState;
+    private FunctionState _functionState = default!;
     
     private readonly IndentedWriter _writer;
     private Context? _context;
-    private ClassExport _class;
-    private PackageAnalysisResult _analysisResult;
+    private ClassExport _class = default!;
+    private PackageAnalysisResult _analysisResult = default!;
 
     private static EClassFlags[] classModifierFlags = new[] { EClassFlags.CLASS_Abstract };
 
@@ -220,16 +220,16 @@ public partial class KismetDecompiler
                 }
                 if (symbol.Children.Count > 0)
                 {
-                    if (symbol.Class.Name == "ArrayProperty")
+                    if (symbol.Class!.Name == "ArrayProperty")
                     {
                         if (symbol.Children.Count() != 1)
                             throw new NotImplementedException();
 
-                        _writer.Write($"Array<{GetDecompiledTypeName(symbol.Children.First().Class.Name)}> {FormatIdentifier(symbol.Name)}");
+                        _writer.Write($"Array<{GetDecompiledTypeName(symbol.Children.First()!.Class!.Name)}> {FormatIdentifier(symbol.Name)}");
                     }
                     else if (isInsideClassDecl)
                     {
-                        _writer.WriteLine($"public {FormatIdentifier(symbol.Class?.Name)} {FormatIdentifier(symbol.Name)};");
+                        _writer.WriteLine($"public {FormatIdentifier(symbol.Class?.Name)} {FormatIdentifier(symbol.Name!)};");
                         if (!importQueue.Any(x => x.Name == symbol.Name))
                             importQueue.Enqueue(symbol);
                     }
@@ -307,10 +307,10 @@ public partial class KismetDecompiler
                             functionModifierText = $"{functionModifierText} ";
 
                         var functionParameterText =
-                            string.Join(", ", symbol.FunctionMetadata.Parameters.Select(x => $"{GetDecompiledTypeName(x.Class.Name)} {x.Name}"));
+                            string.Join(", ", symbol.FunctionMetadata.Parameters.Select(x => $"{GetDecompiledTypeName(x.Class!.Name)} {x.Name}"));
 
                         var functionReturnTypeText =
-                            symbol.FunctionMetadata.ReturnType == null ? "void" : GetDecompiledTypeName(symbol.FunctionMetadata.ReturnType.Name);
+                            symbol.FunctionMetadata.ReturnType == null ? "void" : GetDecompiledTypeName(symbol.FunctionMetadata.ReturnType!.Name);
 
                         _writer.WriteLine($"{functionAttributeText}{functionModifierText}{functionReturnTypeText} {FormatIdentifier(symbol.Name)}({functionParameterText});");
                     }
@@ -515,8 +515,8 @@ public partial class KismetDecompiler
                         }
                         else if (node is JumpNode jumpNode)
                         {
-                            if (!jumpNode.Parent.Children.Any(x => x.Source is EX_PushExecutionFlow) &&
-                                !jumpNode.Parent.Parent.Children.SelectMany(x => x.Children).Any(x => x.Source is EX_PushExecutionFlow))
+                            if (!jumpNode.Parent!.Children.Any(x => x.Source is EX_PushExecutionFlow) &&
+                                !jumpNode.Parent!.Parent!.Children.SelectMany(x => x.Children).Any(x => x.Source is EX_PushExecutionFlow))
                             {
                                 if (jumpNode.Source is EX_PopExecutionFlow)
                                 {
