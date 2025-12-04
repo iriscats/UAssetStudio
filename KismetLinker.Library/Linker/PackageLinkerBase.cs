@@ -457,17 +457,21 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         var createBeforeSerializationDependencies = new List<FPackageIndex>();
         var createBeforeCreateDependencies = new List<FPackageIndex>();
 
-        var classExport = Package.FindClassExportByName(symbol.DeclaringClass?.Name);
-        var functionExport = Package.FindFunctionExportByName(symbol?.DeclaringProcedure?.Name);
+        var className = symbol.DeclaringClass?.Name;
+        var classExport = className != null ? Package.FindClassExportByName(className) : null;
+        var functionName = symbol?.DeclaringProcedure?.Name;
+        var functionExport = functionName != null ? Package.FindFunctionExportByName(functionName) : null;
         var coreUObjectImport = Package.FindImportIndexByObjectName("/Script/CoreUObject") ?? throw new NotImplementedException();
         var propertyClassImportIndex = EnsureObjectImported(coreUObjectImport, serializedType, "Class");
         var propertyTemplateImportIndex = EnsureObjectImported(coreUObjectImport, $"Default__{serializedType}", serializedType);
 
+        var functionOwnerIndex = functionExport != null ? FPackageIndex.FromExport(Package.Exports.IndexOf(functionExport)) : new FPackageIndex(0);
+        var classOwnerIndex = classExport != null ? FPackageIndex.FromExport(Package.Exports.IndexOf(classExport)) : new FPackageIndex(0);
         var propertyOwnerIndex =
-            symbol.DeclaringProcedure != null ?
-                FPackageIndex.FromExport(Package.Exports.IndexOf(functionExport)) :
-            symbol.DeclaringClass != null ?
-                FPackageIndex.FromExport(Package.Exports.IndexOf(classExport)) :
+            functionExport != null ?
+                functionOwnerIndex :
+            classExport != null ?
+                classOwnerIndex :
                 new FPackageIndex(0);
 
         if (!propertyOwnerIndex.IsNull())
@@ -480,7 +484,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             Asset = Package,
             Property = property,
             Data = new(),
-            ObjectName = AddName(symbol.Name),
+            ObjectName = AddName(symbol?.Name ?? string.Empty),
             ObjectFlags = EObjectFlags.RF_Public,
             SerialSize = 0, // Filled by serializer
             SerialOffset = 0, // Filled by serializer
@@ -509,13 +513,13 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         return (packageIndex, propertyExport);
     }
 
-    protected FPackageIndex EnsurePackageIndexForSymbolCreated(Symbol symbol)
+    protected FPackageIndex EnsurePackageIndexForSymbolCreated(Symbol? symbol)
     {
         if (symbol == null)
             return new FPackageIndex(0);
 
         if (TryFindPackageIndexInAsset(symbol, out var packageIndex))
-            return packageIndex;
+            return packageIndex ?? new FPackageIndex(0);
 
         return CreatePackageIndexForSymbol(symbol);
     }
@@ -586,7 +590,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     protected FPackageIndex FixPackageIndex(FPackageIndex packageIndex)
     {
         FixPackageIndex(ref packageIndex);
-        return packageIndex;
+        return packageIndex ?? new FPackageIndex(0);
     }
 
     protected void FixName(ref FName name)
@@ -603,13 +607,13 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         return name;
     }
 
-    protected string? GetFullName(object obj)
+    protected string? GetFullName(object? obj)
     {
         if (obj is Import import)
         {
             if (import.OuterIndex.Index != 0)
             {
-                string parent = GetFullName(import.OuterIndex);
+                var parent = GetFullName(import.OuterIndex) ?? string.Empty;
                 return parent + "." + import.ObjectName.ToString();
             }
             else
@@ -621,7 +625,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         {
             if (export.OuterIndex.Index != 0)
             {
-                string parent = GetFullName(export.OuterIndex);
+                var parent = GetFullName(export.OuterIndex) ?? string.Empty;
                 return parent + "." + export.ObjectName.ToString();
             }
             else
@@ -650,24 +654,38 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         }
     }
 
-    protected FPackageIndex FindPackageIndexInAsset(Symbol symbol)
+    protected FPackageIndex FindPackageIndexInAsset(Symbol? symbol)
     {
         if (symbol == null)
             return new FPackageIndex(0);
 
         if (!TryFindPackageIndexInAsset(symbol, out var packageIndex))
         {
-            packageIndex = EnsurePackageImported(symbol.DeclaringPackage?.Name);
-            packageIndex = EnsureObjectImported(packageIndex, symbol.Name, "Class"); // TODO classname
+            var pkgName = symbol.DeclaringPackage?.Name;
+            if (string.IsNullOrWhiteSpace(pkgName))
+            {
+                packageIndex = new FPackageIndex(0);
+            }
+            else
+            {
+                packageIndex = EnsurePackageImported(pkgName);
+            }
+            var objName = symbol.Name;
+            if (!string.IsNullOrWhiteSpace(objName))
+            {
+                packageIndex = EnsureObjectImported(packageIndex, objName, "Class"); // TODO classname
+            }
         }
 
-        return packageIndex;
+        return packageIndex ?? new FPackageIndex(0);
     }
 
-    protected bool TryFindPackageIndexInAsset(Symbol symbol, out FPackageIndex? index)
+    protected bool TryFindPackageIndexInAsset(Symbol? symbol, out FPackageIndex? index)
     {
         index = null;
 
+        if (symbol == null)
+            return false;
 
         var packageName = symbol.DeclaringPackage?.Name;
         var className = symbol.DeclaringClass?.Name;
@@ -676,7 +694,10 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
         // TODO fix
         if (name == "<null>")
+        {
+            index = new FPackageIndex(0);
             return true;
+        }
 
         var packageClassFunctionLocalName = string.Join(".", new[] { packageName, className, functionName, name }.Where(x => !string.IsNullOrWhiteSpace(x)));
         var classFunctionLocalName = string.Join(".", new[] { className, functionName, name }.Where(x => !string.IsNullOrWhiteSpace(x)));
@@ -850,9 +871,10 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         var coreUObjectImport = EnsurePackageImported("/Script/CoreUObject");
         var functionClassImport = EnsureObjectImported(coreUObjectImport, "Function", "Class");
         var functionDefaultObjectImport = EnsureObjectImported(coreUObjectImport, "Default__Function", "Function");
-        var classExport = Package.FindClassExportByName(context.Symbol?.DeclaringClass?.Name);
+        var className2 = context.Symbol?.DeclaringClass?.Name;
+        var classExport = className2 != null ? Package.FindClassExportByName(className2) : null;
 
-        var ownerIndex = context.Symbol.DeclaringClass != null ?
+        var ownerIndex = classExport != null ?
             FPackageIndex.FromExport(Package.Exports.IndexOf(classExport)) :
             new FPackageIndex(0);
 
@@ -870,7 +892,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
         var export = new FunctionExport()
         {
-            FunctionFlags = context.Symbol.Flags,
+            FunctionFlags = context.Symbol?.Flags ?? default,
             SuperStruct = baseFunctionIndex,
             Children = Array.Empty<FPackageIndex>(),
             LoadedProperties = Array.Empty<FProperty>(),
@@ -879,7 +901,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             ScriptBytecodeRaw = null,
             Field = new() { Next = null },
             Data = new(),
-            ObjectName = new(Package, context.Symbol.Name),
+            ObjectName = new(Package, context.Symbol?.Name ?? string.Empty),
             ObjectFlags = EObjectFlags.RF_Public,
             SerialSize = 0xDEADBEEF,
             SerialOffset = 0xDEADBEEF,
@@ -1069,19 +1091,19 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         return classExport;
     }
 
-    protected T? FindChildExport<T>(StructExport? parent, string name) where T : Export
+    protected TExport? FindChildExport<TExport>(StructExport? parent, string name) where TExport : Export
     {
         var selection = parent?.Children
             .Where(x => x.IsExport())
             .Select(x => x.ToExport(Package)) ??
             Package.Exports;
         return selection
-            .Where(x => x is T && x.ObjectName.ToString() == name)
-            .Cast<T>()
+            .Where(x => x is TExport && x.ObjectName.ToString() == name)
+            .Cast<TExport>()
             .SingleOrDefault();
     }
 
-    protected void LinkCompiledFunction(CompiledFunctionContext functionContext)
+    protected virtual void LinkCompiledFunction(CompiledFunctionContext functionContext)
     {
         var classExport = functionContext.Symbol.DeclaringClass != null ?
             FindChildExport<ClassExport>(null, functionContext.Symbol!.DeclaringClass!.Name) :
@@ -1110,7 +1132,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             }
         }
 
-        functionExport.ScriptBytecode = GetFixedBytecode(functionContext.Bytecode);
+        functionExport!.ScriptBytecode = GetFixedBytecode(functionContext.Bytecode);
     }
 
     protected abstract FPackageIndex EnsurePackageImported(string objectName, bool bImportOptional = false);
