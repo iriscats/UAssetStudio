@@ -1,6 +1,6 @@
 using KismetScript.Syntax.Statements.Expressions;
 
-namespace Kismet.Compiler.Compiler.Exceptions
+namespace KismetScript.Compiler.Compiler.Exceptions
 {
     internal class UnknownSymbolError : Exception
     {

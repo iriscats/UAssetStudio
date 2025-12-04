@@ -1,5 +1,5 @@
-﻿using Kismet.Compiler.Compiler.Context;
-using Kismet.Compiler.Packaging;
+using KismetScript.Compiler.Compiler.Context;
+using KismetCompiler.Library.Packaging;
 using UAssetAPI.IO;
 using UAssetAPI.UnrealTypes;
 

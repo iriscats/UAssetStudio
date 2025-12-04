@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Xml.Linq;
 using UAssetAPI.ExportTypes;
 
-namespace Kismet.Compiler.Compiler.Processing;
+namespace KismetScript.Compiler.Compiler.Processing;
 
 public class TypeResolver
 {

@@ -1,7 +1,7 @@
-using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using UAssetAPI.UnrealTypes;
 
-namespace Kismet.Compiler.Compiler.Intermediate;
+namespace KismetScript.Compiler.Compiler.Intermediate;
 
 public class IntermediatePackageIndex : FPackageIndex
 {

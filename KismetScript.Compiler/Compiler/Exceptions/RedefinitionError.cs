@@ -1,7 +1,7 @@
-﻿using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Syntax;
 
-namespace Kismet.Compiler.Compiler.Exceptions;
+namespace KismetScript.Compiler.Compiler.Exceptions;
 
 public class RedefinitionError : CompilationError
 {

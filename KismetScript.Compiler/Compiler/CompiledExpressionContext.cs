@@ -1,8 +1,8 @@
-using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Syntax;
 using UAssetAPI.Kismet.Bytecode;
 
-namespace Kismet.Compiler.Compiler;
+namespace KismetScript.Compiler.Compiler;
 
 public class CompiledExpressionContext
 {

@@ -1,17 +1,17 @@
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using Kismet.Compiler.Compiler.Exceptions;
+using KismetScript.Compiler.Compiler.Exceptions;
 using KismetScript.Syntax;
 using KismetScript.Syntax.Statements.Expressions.Literals;
-using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Syntax.Statements;
-using Kismet.Compiler.Compiler;
+using KismetScript.Compiler.Compiler;
 using KismetScript.Syntax.Statements.Expressions;
-using Kismet.Compiler.Compiler.Intermediate;
+using KismetScript.Compiler.Compiler.Intermediate;
 using KismetScript.Syntax.Statements.Expressions.Binary;
 
-namespace Kismet.Compiler.Compiler;
+namespace KismetScript.Compiler.Compiler;
 
 public partial class KismetScriptCompiler
 {

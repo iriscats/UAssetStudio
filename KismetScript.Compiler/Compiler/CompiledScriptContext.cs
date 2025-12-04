@@ -1,8 +1,8 @@
-﻿using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace Kismet.Compiler.Compiler;
+namespace KismetScript.Compiler.Compiler;
 
 public abstract class CompiledDeclarationContext
 {

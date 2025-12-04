@@ -18,7 +18,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetScript.Syntax", "Kism
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetScript.Parser", "KismetScript.Parser\KismetScript.Parser.csproj", "{B1C2D3E4-2345-6789-ABCD-EF012345679A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kismet.Compiler", "Kismet.Compiler\Kismet.Compiler.csproj", "{A1B2C3D4-1234-5678-9ABC-DEF012345679}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetScript.Compiler", "KismetScript.Compiler\KismetScript.Compiler.csproj", "{A1B2C3D4-1234-5678-9ABC-DEF012345679}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,4 +1,4 @@
-using Kismet.Compiler.Compiler.Exceptions;
+using KismetScript.Compiler.Compiler.Exceptions;
 using KismetScript.Syntax.Statements.Expressions.Binary;
 using KismetScript.Syntax.Statements.Expressions;
 using KismetScript.Syntax;
@@ -6,11 +6,11 @@ using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using KismetScript.Syntax.Statements.Expressions.Literals;
 using KismetScript.Syntax.Statements.Expressions.Unary;
-using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using UAssetAPI.UnrealTypes;
 using KismetScript.Utilities;
 
-namespace Kismet.Compiler.Compiler;
+namespace KismetScript.Compiler.Compiler;
 
 public partial class KismetScriptCompiler
 {
