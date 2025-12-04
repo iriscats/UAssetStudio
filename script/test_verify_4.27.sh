@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Paths (adjust if your environment differs)
-ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/BP_PlayerControllerBase.uasset"
+ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/test_case_4_27/BP_PlayerControllerBase.uasset"
 USMAP_PATH=""  # Optional: set to a valid UE4.27 .usmap if needed
 REPO_ROOT="/Users/bytedance/Project/UAssetStudio"
 CLI_PROJ="$REPO_ROOT/UAssetStudio.Cli/UAssetStudio.Cli.csproj"
