@@ -14,8 +14,8 @@ public class Symbol
     private Symbol? _class;
     private Symbol? _super;
     private Symbol? _template;
-    private Symbol _superStruct = null!;
-    private Symbol _innerClass = null!;
+    private Symbol? _superStruct;
+    private Symbol? _innerClass;
     private Symbol? _propertyType;
 
     public Symbol? Parent
