@@ -1,7 +1,7 @@
 using UAssetAPI;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Library.Decompiler.Context.Properties;
+namespace KismetScript.Linker.Decompiler.Context.Properties;
 
 public interface IPropertyData
 {

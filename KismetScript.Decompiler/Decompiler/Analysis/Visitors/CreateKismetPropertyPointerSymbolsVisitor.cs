@@ -2,7 +2,7 @@ using KismetScript.Utilities;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 
-namespace KismetCompiler.Library.Decompiler.Analysis.Visitors;
+namespace KismetScript.Linker.Decompiler.Analysis.Visitors;
 
 /// <summary>
 /// Creates any missing symbols inferred from Kismet property pointers used in various instructions.

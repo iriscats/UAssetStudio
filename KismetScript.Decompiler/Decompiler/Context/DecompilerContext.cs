@@ -1,7 +1,7 @@
 ﻿using UAssetAPI.ExportTypes;
 using UAssetAPI;
 
-namespace KismetCompiler.Library.Decompiler.Context
+namespace KismetScript.Linker.Decompiler.Context
 {
     public class DecompilerContext
     {

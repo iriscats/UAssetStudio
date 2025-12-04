@@ -11,7 +11,7 @@ using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Library.Packaging;
+namespace KismetScript.Linker;
 
 public abstract partial class PackageLinker<T> where T : UnrealPackage
 {

@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using KismetCompiler.Library.Decompiler;
-using KismetCompiler.Library.Decompiler.Analysis;
-using KismetCompiler.Library.Decompiler.Context;
-using KismetCompiler.Library.Decompiler.Context.Nodes;
-using KismetCompiler.Library.Decompiler.Context.Properties;
-using KismetCompiler.Library.Decompiler.Passes;
+using KismetScript.Linker.Decompiler;
+using KismetScript.Linker.Decompiler.Analysis;
+using KismetScript.Linker.Decompiler.Context;
+using KismetScript.Linker.Decompiler.Context.Nodes;
+using KismetScript.Linker.Decompiler.Context.Properties;
+using KismetScript.Linker.Decompiler.Passes;
 using KismetScript.Parser;
 using KismetScript.Utilities;
 using UAssetAPI;
@@ -14,7 +14,7 @@ using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Decompiler;
+namespace KismetScript.Decompiler;
 
 public partial class KismetDecompiler
 {

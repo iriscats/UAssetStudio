@@ -1,9 +1,5 @@
 using System.CommandLine;
-using System.IO;
-using KismetCompiler.Library.Packaging;
-using KismetScript.Compiler.Compiler;
-using UAssetAPI;
-using UAssetAPI.Kismet;
+using KismetScript.Linker;
 using UAssetAPI.UnrealTypes;
 
 namespace UAssetStudio.Cli.CMD

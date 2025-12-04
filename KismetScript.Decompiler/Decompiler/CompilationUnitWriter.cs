@@ -9,7 +9,7 @@ using KismetScript.Syntax.Statements.Expressions.Unary;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace KismetCompiler.Library.Decompiler;
+namespace KismetScript.Linker.Decompiler;
 
 public class CompilationUnitWriter
 {
