@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UAssetAPI\UAssetAPI\UAssetAPI.csproj" />
-    <ProjectReference Include="..\KismetScript.Compiler\KismetScript.Compiler.csproj" />
+    <ProjectReference Include="..\KismetScript.Parser\KismetScript.Parser.csproj" />
     <ProjectReference Include="..\KismetScript.Utilities\KismetScript.Utilities.csproj" />
   </ItemGroup>
 
