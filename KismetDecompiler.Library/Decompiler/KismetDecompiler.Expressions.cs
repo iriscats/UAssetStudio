@@ -2,7 +2,7 @@
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using KismetCompiler.Library.Utilities;
+using Kismet.Compiler.Utilities;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using KismetCompiler.Library.Decompiler.Analysis;
 

@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Utilities;
+﻿using Kismet.Compiler.Utilities;
 using UAssetAPI;
 using UAssetAPI.FieldTypes;
 using UAssetAPI.UnrealTypes;

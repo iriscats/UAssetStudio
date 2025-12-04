@@ -1,7 +1,7 @@
 using System.CommandLine;
 using System.IO;
 using KismetCompiler.Library.Packaging;
-using KismetCompiler.Library.Compiler;
+using Kismet.Compiler.Compiler;
 using UAssetAPI;
 using UAssetAPI.Kismet;
 using UAssetAPI.UnrealTypes;

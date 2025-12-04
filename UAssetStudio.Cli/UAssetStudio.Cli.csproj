@@ -14,7 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KismetAnalyzer.CFG\KismetAnalyzer.CFG.csproj" />
     <ProjectReference Include="..\UAssetAPI\UAssetAPI\UAssetAPI.csproj" />
-    <ProjectReference Include="..\KismetCompiler.Library\KismetCompiler.Library.csproj" />
+    <ProjectReference Include="..\Kismet.Compiler\Kismet.Compiler.csproj" />
     <ProjectReference Include="..\KismetDecompiler.Library\KismetDecompiler.Library.csproj" />
     <ProjectReference Include="..\KismetLinker.Library\KismetLinker.Library.csproj" />
   </ItemGroup>
