@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UAssetAPI\UAssetAPI\UAssetAPI.csproj" />
-    <ProjectReference Include="..\Kismet.Compiler\Kismet.Compiler.csproj" />
+    <ProjectReference Include="..\KismetScript.Compiler\KismetScript.Compiler.csproj" />
     <ProjectReference Include="..\KismetScript.Utilities\KismetScript.Utilities.csproj" />
   </ItemGroup>
 

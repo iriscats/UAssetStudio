@@ -1,5 +1,5 @@
-using Kismet.Compiler.Compiler.Exceptions;
-using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Exceptions;
+using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Syntax;
 using KismetScript.Syntax.Statements;
 using KismetScript.Syntax.Statements.Declarations;
@@ -12,12 +12,12 @@ using System.Diagnostics;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
-using Kismet.Compiler.Compiler.Intermediate;
+using KismetScript.Compiler.Compiler.Intermediate;
 using KismetScript.Syntax.Statements.Expressions.Binary;
 using KismetScript.Utilities;
-using Kismet.Compiler.Compiler.Frontend;
+using KismetScript.Compiler.Compiler.Frontend;
 
-namespace Kismet.Compiler.Compiler;
+namespace KismetScript.Compiler.Compiler;
 
 /// <summary>
 /// This class implements all the necessary logic for compiling a parsed compilation unit AST into an intermediary Kismet script.

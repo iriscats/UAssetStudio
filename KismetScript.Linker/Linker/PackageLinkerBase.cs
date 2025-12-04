@@ -1,6 +1,6 @@
-using Kismet.Compiler.Compiler;
-using Kismet.Compiler.Compiler.Context;
-using Kismet.Compiler.Compiler.Intermediate;
+using KismetScript.Compiler.Compiler;
+using KismetScript.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Intermediate;
 using KismetScript.Utilities;
 using System.Text.RegularExpressions;
 using UAssetAPI;

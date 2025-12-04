@@ -1,4 +1,4 @@
-using Kismet.Compiler.Compiler.Exceptions;
+using KismetScript.Compiler.Compiler.Exceptions;
 using KismetScript.Syntax;
 using KismetScript.Syntax.Statements;
 using KismetScript.Syntax.Statements.Declarations;
@@ -6,7 +6,7 @@ using System.Collections;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace Kismet.Compiler.Compiler.Context
+namespace KismetScript.Compiler.Compiler.Context
 {
     public enum SymbolCategory
     {

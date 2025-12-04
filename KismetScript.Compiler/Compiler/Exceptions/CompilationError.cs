@@ -1,6 +1,6 @@
-﻿using KismetScript.Syntax;
+using KismetScript.Syntax;
 
-namespace Kismet.Compiler.Compiler.Exceptions;
+namespace KismetScript.Compiler.Compiler.Exceptions;
 
 public class CompilationError : Exception
 {

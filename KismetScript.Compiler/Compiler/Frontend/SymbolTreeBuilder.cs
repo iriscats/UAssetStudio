@@ -1,4 +1,4 @@
-using Kismet.Compiler.Compiler.Context;
+using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Syntax;
 using KismetScript.Syntax.Statements;
 using KismetScript.Syntax.Statements.Declarations;
@@ -6,7 +6,7 @@ using KismetScript.Syntax.Statements.Expressions.Literals;
 using UAssetAPI.UnrealTypes;
 using UAssetAPI.Kismet.Bytecode;
 
-namespace Kismet.Compiler.Compiler.Frontend;
+namespace KismetScript.Compiler.Compiler.Frontend;
 
 public class SymbolTreeBuilder
 {
@@ -129,10 +129,10 @@ public class SymbolTreeBuilder
             if (importAttrib != null)
             {
                 if (importAttrib.Arguments.Count != 1)
-                    throw new Kismet.Compiler.Compiler.Exceptions.UnexpectedSyntaxError(importAttrib);
+                    throw new KismetScript.Compiler.Compiler.Exceptions.UnexpectedSyntaxError(importAttrib);
                 var packagePath = importAttrib.Arguments[0].Expression as StringLiteral;
                 if (packagePath == null)
-                    throw new Kismet.Compiler.Compiler.Exceptions.UnexpectedSyntaxError(importAttrib.Arguments[0]);
+                    throw new KismetScript.Compiler.Compiler.Exceptions.UnexpectedSyntaxError(importAttrib.Arguments[0]);
                 var importedDeclarations = packageImports.Where(x => x.PackagePath == packagePath).FirstOrDefault().Declarations;
                 if (importedDeclarations != null)
                     importedDeclarations.Add(decl);
@@ -279,12 +279,12 @@ public class SymbolTreeBuilder
         return functionFlags;
     }
 
-    private static Kismet.Compiler.Compiler.FunctionCustomFlags GetCustomFunctionFlags(ProcedureDeclaration procedureDeclaration)
+    private static KismetScript.Compiler.Compiler.FunctionCustomFlags GetCustomFunctionFlags(ProcedureDeclaration procedureDeclaration)
     {
-        var functionFlags = (Kismet.Compiler.Compiler.FunctionCustomFlags)0;
+        var functionFlags = (KismetScript.Compiler.Compiler.FunctionCustomFlags)0;
         foreach (var attr in procedureDeclaration.Attributes)
         {
-            if (!System.Enum.TryParse<Kismet.Compiler.Compiler.FunctionCustomFlags>(attr.Identifier.Text, out var flag))
+            if (!System.Enum.TryParse<KismetScript.Compiler.Compiler.FunctionCustomFlags>(attr.Identifier.Text, out var flag))
                 continue;
             functionFlags |= flag;
         }

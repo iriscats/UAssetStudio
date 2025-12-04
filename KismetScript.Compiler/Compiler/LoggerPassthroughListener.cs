@@ -1,6 +1,6 @@
 using KismetScript.Utilities;
 
-namespace Kismet.Compiler.Compiler;
+namespace KismetScript.Compiler.Compiler;
 
 public class LoggerPassthroughListener : LogListener
 {
