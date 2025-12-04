@@ -9,7 +9,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
     private readonly FunctionAnalysisContext _context;
     private Symbol _instance;
     private Stack<(KismetExpression Context, Symbol ContextSymbol)> _contextStack = new();
-    private Dictionary<KismetExpression, Symbol> _expressionSymbolCache = new();
+    private Dictionary<KismetExpression, Symbol?> _expressionSymbolCache = new();
 
     public MemberAccessTrackingVisitor(FunctionAnalysisContext context, Symbol instance)
     {
@@ -20,7 +20,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
     private Symbol? EnsurePropertySymbolCreated(KismetPropertyPointer pointer)
         => VisitorHelper.EnsurePropertySymbolCreated(_context, pointer);
 
-    private Symbol GetProperty(Symbol? context, KismetPropertyPointer pointer)
+    private Symbol? GetProperty(Symbol? context, KismetPropertyPointer pointer)
     {
         if (context != null)
         {
@@ -46,7 +46,7 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
         if (expr is EX_InstanceVariable instanceVariable)
         {
             var prop = GetProperty(_instance, instanceVariable.Variable);
-            return prop;
+            return prop ?? throw new NotImplementedException();
         }
         else if (expr is EX_ObjectConst objectConst)
         {
@@ -87,7 +87,9 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
         }
         else if (expr is EX_Context context)
         {
-            return _expressionSymbolCache[context];
+            return _expressionSymbolCache.TryGetValue(context, out var s)
+                ? s ?? throw new NotImplementedException()
+                : throw new NotImplementedException();
         }
         else if (expr is EX_StructMemberContext structMemberContext)
         {
@@ -192,12 +194,12 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                 {
                     var sym = EnsurePropertySymbolCreated(defaultVariable.Variable);
 
-                    if (!ActiveContextSymbol.HasMember(sym!))
+                    if (sym != null && !ActiveContextSymbol.HasMember(sym))
                     {
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext!,
-                            ContextSymbol = ActiveContextSymbol!,
+                            ContextExpression = ActiveContext ?? defaultVariable,
+                            ContextSymbol = ActiveContextSymbol,
                             MemberExpression = defaultVariable,
                             MemberSymbol = sym
                         });
@@ -210,11 +212,11 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                 {
                     var sym = EnsurePropertySymbolCreated(instanceVariable.Variable);
 
-                    if (!ActiveContextSymbol.HasMember(sym!))
+                    if (sym != null && !ActiveContextSymbol.HasMember(sym))
                     {
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext!,
+                            ContextExpression = ActiveContext ?? instanceVariable,
                             ContextSymbol = ActiveContextSymbol,
                             MemberExpression = instanceVariable,
                             MemberSymbol = sym
@@ -240,18 +242,18 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         //    structContext.
                         //}
 
-                        if (!structContext.HasMember(member!))
+                        if (member != null && !structContext.HasMember(member))
                         {
                             _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                             {
                                 ContextExpression = let.Variable,
-                                ContextSymbol = structContext!,
+                                ContextSymbol = structContext,
                                 MemberExpression = let,
                                 MemberSymbol = member
                             });
                         }
                     }
-                    _expressionSymbolCache[let] = member!;
+                    _expressionSymbolCache[let] = member;
                 }
                 break;
 
@@ -271,8 +273,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                             };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext!,
-                            ContextSymbol = ActiveContextSymbol!,
+                            ContextExpression = ActiveContext ?? callMulticastDelegate,
+                            ContextSymbol = ActiveContextSymbol,
                             MemberExpression = callMulticastDelegate,
                             MemberSymbol = sym
                         });
@@ -301,8 +303,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext!,
-                            ContextSymbol = ActiveContextSymbol!,
+                            ContextExpression = ActiveContext ?? callMath,
+                            ContextSymbol = ActiveContextSymbol,
                             MemberExpression = callMath,
                             MemberSymbol = sym
                         });
@@ -313,7 +315,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                     sym.Flags &= ~SymbolFlags.UnresolvedClass;
                     sym.FunctionMetadata.CallingConvention |= CallingConvention.CallMath;
                     sym.Type = SymbolType.Function;
-                    sym.Parent!.ClassMetadata.IsStaticClass = true;
+                    if (sym.Parent != null)
+                        sym.Parent.ClassMetadata.IsStaticClass = true;
 
                     //// Analyse final (static) function call
                     //var functionSymbol =
@@ -366,8 +369,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext!,
-                            ContextSymbol = ActiveContextSymbol!,
+                            ContextExpression = ActiveContext ?? finalFunction,
+                            ContextSymbol = ActiveContextSymbol,
                             MemberExpression = finalFunction,
                             MemberSymbol = sym
                         });
@@ -449,8 +452,8 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                         };
                         _context.UnexpectedMemberAccesses.Add(new MemberAccessContext()
                         {
-                            ContextExpression = ActiveContext,
-                            ContextSymbol = ActiveContextSymbol!,
+                            ContextExpression = ActiveContext ?? virtualFunction,
+                            ContextSymbol = ActiveContextSymbol,
                             MemberExpression = virtualFunction,
                             MemberSymbol = sym
                         });
@@ -474,8 +477,11 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
                     //_contextStack.Pop();
                     if (contextSymbol.Flags.HasFlag(SymbolFlags.UnresolvedClass))
                     {
-                        contextSymbol.Class = memberSymbol.Parent;
-                        contextSymbol.Flags &= ~SymbolFlags.UnresolvedClass;
+                        if (memberSymbol?.Parent != null)
+                        {
+                            contextSymbol.Class = memberSymbol.Parent;
+                            contextSymbol.Flags &= ~SymbolFlags.UnresolvedClass;
+                        }
                     }
 
                     _expressionSymbolCache[structMemberContext] = memberSymbol;
@@ -501,5 +507,4 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
             base.Visit(expression, ref codeOffset);
     }
 }
-// pragmas to reduce noise from nullable flow in complex analysis
-#pragma warning disable CS8601, CS8602, CS8603, CS8604
+ 
