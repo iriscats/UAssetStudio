@@ -4,9 +4,9 @@ using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 using KismetScript.Utilities;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using KismetCompiler.Library.Decompiler.Analysis;
+using KismetScript.Linker.Decompiler.Analysis;
 
-namespace KismetCompiler.Decompiler
+namespace KismetScript.Decompiler
 {
     public partial class KismetDecompiler
     {

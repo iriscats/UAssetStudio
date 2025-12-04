@@ -4,7 +4,7 @@ using UAssetAPI.ExportTypes;
 using UAssetAPI.FieldTypes;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Library.Decompiler.Context.Properties;
+namespace KismetScript.Linker.Decompiler.Context.Properties;
 
 public class PropertyExportData : IPropertyData
 {

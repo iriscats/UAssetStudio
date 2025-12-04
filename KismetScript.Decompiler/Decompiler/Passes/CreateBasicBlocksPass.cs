@@ -1,8 +1,8 @@
-using KismetCompiler.Library.Decompiler.Context;
-using KismetCompiler.Library.Decompiler.Context.Nodes;
+using KismetScript.Linker.Decompiler.Context;
+using KismetScript.Linker.Decompiler.Context.Nodes;
 using UAssetAPI.Kismet.Bytecode;
 
-namespace KismetCompiler.Library.Decompiler.Passes
+namespace KismetScript.Linker.Decompiler.Passes
 {
     public class CreateBasicBlocksPass : IDecompilerPass
     {

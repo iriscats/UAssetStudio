@@ -1,3 +1,3 @@
-﻿namespace KismetCompiler.Library.Decompiler.Context.Nodes;
+﻿namespace KismetScript.Linker.Decompiler.Context.Nodes;
 
 public class ReturnNode : Node { }

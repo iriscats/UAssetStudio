@@ -5,7 +5,7 @@ using UAssetAPI.FieldTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Library.Decompiler.Analysis;
+namespace KismetScript.Linker.Decompiler.Analysis;
 
 public class Symbol
 {

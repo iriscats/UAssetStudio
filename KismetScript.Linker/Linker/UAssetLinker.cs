@@ -1,18 +1,13 @@
 using KismetScript.Compiler.Compiler;
 using KismetScript.Compiler.Compiler.Context;
-using KismetScript.Compiler.Compiler.Intermediate;
 using KismetScript.Utilities;
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UAssetAPI;
-using UAssetAPI.CustomVersions;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.FieldTypes;
-using UAssetAPI.Kismet.Bytecode;
-using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Library.Packaging;
+namespace KismetScript.Linker;
 
 public partial class UAssetLinker : PackageLinker<UAsset>
 {

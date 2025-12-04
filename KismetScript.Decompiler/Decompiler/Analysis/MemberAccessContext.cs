@@ -1,7 +1,7 @@
 ﻿using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 
-namespace KismetCompiler.Library.Decompiler.Analysis;
+namespace KismetScript.Linker.Decompiler.Analysis;
 
 public class MemberAccessContext
 {

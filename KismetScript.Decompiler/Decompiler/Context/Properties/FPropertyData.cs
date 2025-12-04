@@ -3,7 +3,7 @@ using UAssetAPI;
 using UAssetAPI.FieldTypes;
 using UAssetAPI.UnrealTypes;
 
-namespace KismetCompiler.Library.Decompiler.Context.Properties;
+namespace KismetScript.Linker.Decompiler.Context.Properties;
 
 public class FPropertyData : IPropertyData
 {

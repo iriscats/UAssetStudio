@@ -1,4 +1,4 @@
-﻿namespace KismetCompiler.Library.Decompiler.Analysis;
+﻿namespace KismetScript.Linker.Decompiler.Analysis;
 
 [Flags]
 public enum CallingConvention

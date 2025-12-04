@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using UAssetAPI.Kismet.Bytecode;
 
-namespace KismetCompiler.Library.Decompiler.Analysis.Visitors;
+namespace KismetScript.Linker.Decompiler.Analysis.Visitors;
 
 public static class VisitorHelper
 {
