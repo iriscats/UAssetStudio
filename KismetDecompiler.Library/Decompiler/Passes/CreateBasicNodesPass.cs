@@ -69,7 +69,7 @@ namespace KismetCompiler.Library.Decompiler.Passes
             protected override void OnExit(KismetExpressionContext<Node> context)
             {
                 var node = _stack.Pop();
-                node.CodeEndOffset = context.CodeEndOffset.Value;
+                node.CodeEndOffset = context.CodeEndOffset ?? node.CodeStartOffset;
 
                 base.OnExit(context);
             }

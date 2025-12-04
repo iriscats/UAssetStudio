@@ -1,4 +1,4 @@
-﻿using Kismet.Compiler.Utilities;
+using Kismet.Compiler.Utilities;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 
@@ -501,3 +501,5 @@ public class MemberAccessTrackingVisitor : KismetExpressionVisitor
             base.Visit(expression, ref codeOffset);
     }
 }
+// pragmas to reduce noise from nullable flow in complex analysis
+#pragma warning disable CS8601, CS8602, CS8603, CS8604

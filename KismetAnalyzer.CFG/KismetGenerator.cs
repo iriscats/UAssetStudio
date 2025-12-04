@@ -176,7 +176,7 @@ public class BlueprintGenerator {
         public string PinName { get; set; } = string.Empty;
         public string? PinToolTip { get; set; }
         public KismetPinDirection Direction { get; set; } = KismetPinDirection.EGPD_Input;
-        public KismetPinType PinType { get; set; }
+        public KismetPinType PinType { get; set; } = KismetPinType.EXEC;
         public ICollection<KismetPinLink> LinkedTo { get; set; } = new List<KismetPinLink>();
         public Guid PersistentGuid { get; } = Guid.Empty;
         public bool bHidden { get; set; } = false;
@@ -204,8 +204,8 @@ public class BlueprintGenerator {
         }
     }
     public class KismetPinLink {
-        public KismetNode Node { get; set; }
-        public KismetPin Pin { get; set; }
+        public required KismetNode Node { get; set; }
+        public required KismetPin Pin { get; set; }
     }
     public enum KismetPinDirection {
         EGPD_Output,

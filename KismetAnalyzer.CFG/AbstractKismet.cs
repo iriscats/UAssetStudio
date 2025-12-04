@@ -663,8 +663,6 @@ public class AEX_Breakpoint : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_Breakpoint");
-        return new EX_Breakpoint() {
-        };
     }
 }
 public class AEX_ByteConst : AbstractKismetExpression {
@@ -774,8 +772,6 @@ public class AEX_Context_FailSilent : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_Context_FailSilent");
-        return new EX_Context_FailSilent() {
-        };
     }
 }
 public class AEX_CrossInterfaceCast : AbstractKismetExpression {
@@ -785,8 +781,6 @@ public class AEX_CrossInterfaceCast : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_CrossInterfaceCast");
-        return new EX_CrossInterfaceCast() {
-        };
     }
 }
 public class AEX_DefaultVariable : AbstractKismetExpression {
@@ -796,8 +790,6 @@ public class AEX_DefaultVariable : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_DefaultVariable");
-        return new EX_DefaultVariable() {
-        };
     }
 }
 public class AEX_DeprecatedOp4A : AbstractKismetExpression {
@@ -807,8 +799,6 @@ public class AEX_DeprecatedOp4A : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_DeprecatedOp4A");
-        return new EX_DeprecatedOp4A() {
-        };
     }
 }
 public class AEX_DynamicCast : AbstractKismetExpression {
@@ -1197,8 +1187,6 @@ public class AEX_LetWeakObjPtr : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_LetWeakObjPtr");
-        return new EX_LetWeakObjPtr() {
-        };
     }
 }
 public class AEX_LocalFinalFunction : AbstractKismetExpression {
@@ -1668,7 +1656,6 @@ public class AEX_WireTracepoint : AbstractKismetExpression {
     }
     public override KismetExpression ToKismetExpression(KismetBuilder b) {
         throw new NotImplementedException("EX_WireTracepoint");
-        return new EX_WireTracepoint() {
-        };
     }
 }
+#pragma warning disable CS0162

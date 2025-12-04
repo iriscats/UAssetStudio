@@ -543,14 +543,16 @@ public class Kismet {
             var prop = fnSrc.LoadedProperties.First(l => l.Name.ToString() == p.Path[0].ToString());
             if (prop == null) throw new NotImplementedException("Property missing");
 
-            var existing = fnDst.LoadedProperties.FirstOrDefault(l => l.Name.ToString() == p.Path[0].ToString(), null);
+            var keyName = (p.Path != null && p.Path.Length > 0) ? p.Path[0].ToString() : string.Empty;
+            var existing = (fnDst.LoadedProperties ?? Array.Empty<FProperty>()).FirstOrDefault(l => l != null && l.Name != null && l.Name.ToString() == keyName, null);
             if (existing == null) { // prop doesn't already exist so copy it over
                 // TODO check type of prop == existing, only checking by name currently
-                fnDst.LoadedProperties = fnDst.LoadedProperties.Append(CopyProperty(prop, src, dst)).ToArray();
+                var currentProps = fnDst.LoadedProperties ?? Array.Empty<FProperty>();
+                fnDst.LoadedProperties = currentProps.Append(CopyProperty(prop, src, dst)).ToArray();
             }
 
             return new FFieldPath() {
-                Path = p.Path.Select(p => p.Transfer(dst)).ToArray(),
+                Path = (p.Path ?? Array.Empty<FName>()).Select(n => n.Transfer(dst)).ToArray(),
                 ResolvedOwner = FPackageIndex.FromExport(dst.Exports.IndexOf(fnDst)), // TODO avoid IndexOf
             };
         }
@@ -972,10 +974,10 @@ public class Kismet {
                 var offsets = GetOffsets(asset, ubergraph.ScriptBytecode).ToDictionary(l => l.Item1, l => l.Item2);
 
 
-                Func<string, KismetExpression> log = (msg) => {
+                Func<string, KismetExpression?> log = (msg) => {
                     var exp = CopyExpressionTo(logFn, src, asset, srcFn, ubergraph);
                     if (exp is EX_Context ctx && ctx.ContextExpression is EX_LocalVirtualFunction lvf) {
-                        if (lvf.Parameters[1] is EX_StringConst scMsg) scMsg.Value = msg;
+                        if (lvf.Parameters.Length > 1 && lvf.Parameters[1] is EX_StringConst scMsg) scMsg.Value = msg;
                         ctx.Offset = GetSize(asset, ctx.ContextExpression);
                     }
                     return exp;
@@ -997,22 +999,37 @@ public class Kismet {
                 //client
                 var index = list.IndexOf(offsets[15348]);
                 var exp = log("wait loop client");
-                list.Insert(index++, exp);
-                offsets[15348] = exp;
+                if (exp != null) {
+                    list.Insert(index++, exp);
+                    offsets[15348] = exp;
+                }
 
-                list.Insert(index++, exp = CopyExpressionTo(srcOffsets[15], src, asset, srcUg, ubergraph));
-                offsets[100002] = exp;
-                list.Insert(index++, exp = CopyExpressionTo(srcOffsets[45], src, asset, srcUg, ubergraph));
-                list.Insert(index++, exp = CopyExpressionTo(srcOffsets[91], src, asset, srcUg, ubergraph));
-                ((EX_JumpIfNot) exp).CodeOffset = 100000;
-                offsets[100001] = exp;
+                exp = CopyExpressionTo(srcOffsets[15], src, asset, srcUg, ubergraph);
+                if (exp != null) {
+                    list.Insert(index++, exp);
+                    offsets[100002] = exp;
+                }
+                exp = CopyExpressionTo(srcOffsets[45], src, asset, srcUg, ubergraph);
+                if (exp != null) list.Insert(index++, exp);
+                exp = CopyExpressionTo(srcOffsets[91], src, asset, srcUg, ubergraph);
+                if (exp is EX_JumpIfNot jin) {
+                    list.Insert(index++, jin);
+                    jin.CodeOffset = 100000;
+                    offsets[100001] = jin;
+                }
 
-                list.Add(exp = CopyExpressionTo(srcOffsets[156], src, asset, srcUg, ubergraph));
-                offsets[100000] = exp;
-                Console.WriteLine(exp);
-                ((EX_SkipOffsetConst)((EX_StructConst) ((EX_CallMath) exp).Parameters[2]).Value[0]).Value = 100002;
-                ((EX_NameConst)((EX_StructConst) ((EX_CallMath) exp).Parameters[2]).Value[2]).Value = FName.FromString(asset, "ExecuteUbergraph_PLS_Base");
-                list.Add(exp = CopyExpressionTo(srcOffsets[210], src, asset, srcUg, ubergraph));
+                exp = CopyExpressionTo(srcOffsets[156], src, asset, srcUg, ubergraph);
+                if (exp != null) {
+                    list.Add(exp);
+                    offsets[100000] = exp;
+                    Console.WriteLine(exp);
+                    if (exp is EX_CallMath cm && cm.Parameters.Length > 2 && cm.Parameters[2] is EX_StructConst sc && sc.Value.Length > 0) {
+                        if (sc.Value[0] is EX_SkipOffsetConst soc) soc.Value = 100002;
+                        if (sc.Value.Length > 2 && sc.Value[2] is EX_NameConst nc) nc.Value = FName.FromString(asset, "ExecuteUbergraph_PLS_Base");
+                    }
+                }
+                exp = CopyExpressionTo(srcOffsets[210], src, asset, srcUg, ubergraph);
+                if (exp != null) list.Add(exp);
 
 
                 /*
