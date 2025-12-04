@@ -30,17 +30,24 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UAssetAPI\UAssetAPI\UAssetAPI.csproj" />
+    <ProjectReference Include="..\KismetScript.Syntax\KismetScript.Syntax.csproj" />
+    <ProjectReference Include="..\KismetScript.Parser\KismetScript.Parser.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="Linker\**\*.cs" />
     <Compile Remove="Decompiler\**\*.cs" />
+    <Compile Remove="Parser\**" />
+    <Compile Remove="Syntax\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Parser\KismetScript.g4">
-      <CustomToolNamespace>Kismet.Compiler.Parser</CustomToolNamespace>
-    </None>
+    <Antlr4 Remove="Parser\**" />
+    <EmbeddedResource Remove="Parser\**" />
+    <None Remove="Parser\**" />
+    <Antlr4 Remove="Syntax\**" />
+    <EmbeddedResource Remove="Syntax\**" />
+    <None Remove="Syntax\**" />
   </ItemGroup>
 
 </Project>

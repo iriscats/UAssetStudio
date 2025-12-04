@@ -1,19 +1,19 @@
 using Kismet.Compiler.Compiler.Exceptions;
 using Kismet.Compiler.Compiler.Context;
-using Kismet.Compiler.Syntax;
-using Kismet.Compiler.Syntax.Statements;
-using Kismet.Compiler.Syntax.Statements.Declarations;
-using Kismet.Compiler.Syntax.Statements.Expressions;
-using Kismet.Compiler.Syntax.Statements.Expressions.Identifiers;
-using Kismet.Compiler.Syntax.Statements.Expressions.Literals;
-using Kismet.Compiler.Syntax.Statements.Expressions.Unary;
+using KismetScript.Syntax;
+using KismetScript.Syntax.Statements;
+using KismetScript.Syntax.Statements.Declarations;
+using KismetScript.Syntax.Statements.Expressions;
+using KismetScript.Syntax.Statements.Expressions.Identifiers;
+using KismetScript.Syntax.Statements.Expressions.Literals;
+using KismetScript.Syntax.Statements.Expressions.Unary;
 using System.Data;
 using System.Diagnostics;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
 using Kismet.Compiler.Compiler.Intermediate;
-using Kismet.Compiler.Syntax.Statements.Expressions.Binary;
+using KismetScript.Syntax.Statements.Expressions.Binary;
 using Kismet.Compiler.Utilities;
 using Kismet.Compiler.Compiler.Frontend;
 

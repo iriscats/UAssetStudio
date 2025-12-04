@@ -1,11 +1,11 @@
-﻿using Kismet.Compiler.Syntax;
-using Kismet.Compiler.Syntax.Statements;
-using Kismet.Compiler.Syntax.Statements.Declarations;
-using Kismet.Compiler.Syntax.Statements.Expressions;
-using Kismet.Compiler.Syntax.Statements.Expressions.Binary;
-using Kismet.Compiler.Syntax.Statements.Expressions.Identifiers;
-using Kismet.Compiler.Syntax.Statements.Expressions.Literals;
-using Kismet.Compiler.Syntax.Statements.Expressions.Unary;
+﻿using KismetScript.Syntax;
+using KismetScript.Syntax.Statements;
+using KismetScript.Syntax.Statements.Declarations;
+using KismetScript.Syntax.Statements.Expressions;
+using KismetScript.Syntax.Statements.Expressions.Binary;
+using KismetScript.Syntax.Statements.Expressions.Identifiers;
+using KismetScript.Syntax.Statements.Expressions.Literals;
+using KismetScript.Syntax.Statements.Expressions.Unary;
 using System.Text;
 using System.Text.RegularExpressions;
 

@@ -1,7 +1,7 @@
 using Kismet.Compiler.Compiler.Exceptions;
-using Kismet.Compiler.Syntax;
-using Kismet.Compiler.Syntax.Statements;
-using Kismet.Compiler.Syntax.Statements.Declarations;
+using KismetScript.Syntax;
+using KismetScript.Syntax.Statements;
+using KismetScript.Syntax.Statements.Declarations;
 using System.Collections;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.UnrealTypes;
