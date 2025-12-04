@@ -1,5 +1,5 @@
 ﻿using Kismet.Compiler.Compiler.Context;
-using Kismet.Compiler.Syntax;
+using KismetScript.Syntax;
 
 namespace Kismet.Compiler.Compiler.Exceptions;
 

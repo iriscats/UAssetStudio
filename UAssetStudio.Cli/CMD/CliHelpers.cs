@@ -6,7 +6,7 @@ using Antlr4.Runtime.Misc;
 using KismetCompiler.Decompiler;
 using Kismet.Compiler.Compiler;
 using Kismet.Compiler.Compiler.Processing;
-using Kismet.Compiler.Parser;
+using KismetScript.Parser;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.UnrealTypes;

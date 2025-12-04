@@ -1,9 +1,9 @@
-using Kismet.Compiler.Syntax;
-using Kismet.Compiler.Syntax.Statements;
-using Kismet.Compiler.Syntax.Statements.Declarations;
-using Kismet.Compiler.Syntax.Statements.Expressions;
-using Kismet.Compiler.Syntax.Statements.Expressions.Binary;
-using Kismet.Compiler.Syntax.Statements.Expressions.Identifiers;
+using KismetScript.Syntax;
+using KismetScript.Syntax.Statements;
+using KismetScript.Syntax.Statements.Declarations;
+using KismetScript.Syntax.Statements.Expressions;
+using KismetScript.Syntax.Statements.Expressions.Binary;
+using KismetScript.Syntax.Statements.Expressions.Identifiers;
 using System.Diagnostics;
 using System.Xml.Linq;
 using UAssetAPI.ExportTypes;

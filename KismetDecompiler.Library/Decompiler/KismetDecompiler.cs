@@ -6,7 +6,7 @@ using KismetCompiler.Library.Decompiler.Context;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using KismetCompiler.Library.Decompiler.Context.Properties;
 using KismetCompiler.Library.Decompiler.Passes;
-using Kismet.Compiler.Parser;
+using KismetScript.Parser;
 using Kismet.Compiler.Utilities;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
@@ -768,7 +768,7 @@ public partial class KismetDecompiler
     private string FormatIdentifier(string name, bool allowKeywords = false)
     {
         if (!IdentifierRegex().IsMatch(name) ||
-            (!allowKeywords && KismetScriptParser.IsKeyword(name)))
+            (!allowKeywords && KismetScript.Parser.Parser.KismetScriptParser.IsKeyword(name)))
             return $"`{name}`";
 
         return name;

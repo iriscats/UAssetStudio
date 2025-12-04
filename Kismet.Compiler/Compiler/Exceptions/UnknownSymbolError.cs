@@ -1,4 +1,4 @@
-using Kismet.Compiler.Syntax.Statements.Expressions;
+using KismetScript.Syntax.Statements.Expressions;
 
 namespace Kismet.Compiler.Compiler.Exceptions
 {

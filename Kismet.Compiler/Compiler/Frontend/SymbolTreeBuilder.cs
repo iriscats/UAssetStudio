@@ -1,8 +1,8 @@
 using Kismet.Compiler.Compiler.Context;
-using Kismet.Compiler.Syntax;
-using Kismet.Compiler.Syntax.Statements;
-using Kismet.Compiler.Syntax.Statements.Declarations;
-using Kismet.Compiler.Syntax.Statements.Expressions.Literals;
+using KismetScript.Syntax;
+using KismetScript.Syntax.Statements;
+using KismetScript.Syntax.Statements.Declarations;
+using KismetScript.Syntax.Statements.Expressions.Literals;
 using UAssetAPI.UnrealTypes;
 using UAssetAPI.Kismet.Bytecode;
 

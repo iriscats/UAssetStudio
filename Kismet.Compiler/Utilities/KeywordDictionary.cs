@@ -1,4 +1,4 @@
-﻿using Kismet.Compiler.Syntax;
+﻿using KismetScript.Syntax;
 
 namespace Kismet.Compiler.Utilities;
 
