@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>KismetCompiler.Library</RootNamespace>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>KismetScript.Linker</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
