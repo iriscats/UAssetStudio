@@ -171,7 +171,9 @@ namespace KismetCompiler.Decompiler
                             var functionImport = (expr.StackNode.IsImport() ? expr.StackNode.ToImport(_asset) : null);
                             if (functionImport != null)
                             {
-                                functionExport = (FunctionExport)_asset.Exports.Where(x => x.ObjectName.ToString() == functionName && x is FunctionExport)
+                                functionExport = _asset.Exports
+                                    .Where(x => x.ObjectName.ToString() == functionName && x is FunctionExport)
+                                    .Cast<FunctionExport>()
                                     .FirstOrDefault();
                             }
                             var classSymbol = _analysisResult.AllSymbols.Where(x => x.Export == _class).First();
@@ -211,7 +213,9 @@ namespace KismetCompiler.Decompiler
                             var functionImport = (expr.StackNode.IsImport() ? expr.StackNode.ToImport(_asset) : null);
                             if (functionImport != null)
                             {
-                                functionExport = (FunctionExport)_asset.Exports.Where(x => x.ObjectName.ToString() == functionName && x is FunctionExport)
+                                functionExport = _asset.Exports
+                                    .Where(x => x.ObjectName.ToString() == functionName && x is FunctionExport)
+                                    .Cast<FunctionExport>()
                                     .FirstOrDefault();
                             }
 

@@ -11,8 +11,8 @@ namespace KismetCompiler.Library.Decompiler.Analysis;
 
 public partial class PackageAnalyser
 {
-    private UnrealPackage _asset;
-    private SymbolTable _symbols;
+    private UnrealPackage _asset = null!;
+    private SymbolTable _symbols = null!;
 
     public PackageAnalysisResult Analyse(UnrealPackage package)
     {
@@ -719,7 +719,7 @@ public partial class PackageAnalyser
                 {
                     fakeClass.AddChild(member);
                 }
-                fakeClass.Parent = sym.Parent.Parent;
+                fakeClass.Parent = sym.Parent?.Parent;
 
                 sym.Class = fakeClass;
                 sym.Flags &= ~SymbolFlags.UnresolvedClass;

@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Decompiler.Context;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using KismetCompiler.Library.Utilities;
 using UAssetAPI.ExportTypes;
@@ -24,38 +24,38 @@ namespace KismetCompiler.Library.Decompiler.Passes
             return null;
         }
 
-        public Node Execute(DecompilerContext context, Node root)
+        public Node Execute(DecompilerContext context, Node? root)
         {
             try
             {
-                foreach (var node in root.Children)
+                foreach (var node in root!.Children)
                 {
                     if (node is JumpNode jumpNode)
                     {
                         switch (jumpNode.Source)
                         {
                             case EX_Jump expr:
-                                jumpNode.Target = root.Children.First(x => x.CodeStartOffset == expr.CodeOffset);
+                                jumpNode.Target = root!.Children.First(x => x.CodeStartOffset == expr.CodeOffset);
                                 break;
                             case EX_JumpIfNot expr:
-                                jumpNode.Target = root.Children.First(x => x.CodeStartOffset == expr.CodeOffset);
+                                jumpNode.Target = root!.Children.First(x => x.CodeStartOffset == expr.CodeOffset);
                                 break;
                             case EX_ComputedJump expr:
                                 {
                                     var codeOffset = ResolveComputedJump(context, expr.CodeOffsetExpression);
                                     if (codeOffset != null)
                                     {
-                                        jumpNode.Target = root.Children.First(x => x.CodeStartOffset == codeOffset);
+                                        jumpNode.Target = root!.Children.First(x => x.CodeStartOffset == codeOffset);
                                     }
                                 }
                                 break;
                             case EX_SwitchValue expr:
                                 {
-                                    jumpNode.Target = root.Children.FirstOrDefault(x => x.CodeStartOffset == expr.EndGotoOffset);
+                                    jumpNode.Target = root!.Children.FirstOrDefault(x => x.CodeStartOffset == expr.EndGotoOffset);
                                 }
                                 break;
                             case EX_PushExecutionFlow expr:
-                                jumpNode.Target = root.Children.First(x => x.CodeStartOffset == expr.PushingAddress);
+                                jumpNode.Target = root!.Children.First(x => x.CodeStartOffset == expr.PushingAddress);
                                 break;
                             case EX_PopExecutionFlow expr:
                             case EX_PopExecutionFlowIfNot expr2:
@@ -75,7 +75,7 @@ namespace KismetCompiler.Library.Decompiler.Passes
                 throw;
             }
 
-            return root;
+            return root!;
         }
     }
 }

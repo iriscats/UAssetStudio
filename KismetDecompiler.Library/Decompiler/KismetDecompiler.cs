@@ -32,13 +32,13 @@ public partial class KismetDecompiler
 
     private UnrealPackage _asset;
     private FunctionExport _function;
-    private int _depth = 0;
+    
     private bool _useFullPropertyNames = false;
     private bool _useFullFunctionNames = false;
     private FunctionState _functionState;
-    private bool _verbose = false;
+    
     private readonly IndentedWriter _writer;
-    private Context _context;
+    private Context? _context;
     private ClassExport _class;
     private PackageAnalysisResult _analysisResult;
 
@@ -498,8 +498,6 @@ public partial class KismetDecompiler
                     _writer.WriteLine($"// Block {nextBlockIndex++}");
                     foreach (var node in block.Children)
                     {
-                        string line = "";
-                        string expr = "";
                         if (node is ReturnNode returnNode)
                         {
                             if (returnNode.Source is EX_Jump jump)
@@ -599,8 +597,7 @@ public partial class KismetDecompiler
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(line))
-            _writer.WriteLine(line);
+        // staged lines removed; expressions are written directly
     }
 
     private void WriteExpression(Node node, bool isUbergraphFunction)
@@ -610,7 +607,7 @@ public partial class KismetDecompiler
             var formatted = node.Source != null ? FormatExpression(node.Source, null) : string.Empty;
             WriteExpression(node, isUbergraphFunction, formatted);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Skip malformed expression to preserve compilability of the output
             WriteExpression(node, isUbergraphFunction, string.Empty);
@@ -863,8 +860,9 @@ public partial class KismetDecompiler
             .Where(x => x.Token == EExprToken.EX_LocalFinalFunction || x.Token == EExprToken.EX_FinalFunction)
             .Cast<EX_FinalFunction>()
             .Where(x => x.StackNode.IsExport() && _asset.GetFunctionExport(x.StackNode).IsUbergraphFunction())
-            .Select(x => x.Parameters[0] as EX_IntConst)
-            .Select(x => x.Value);
+            .Select(x => x.Parameters.FirstOrDefault() as EX_IntConst)
+            .Where(x => x != null)
+            .Select(x => x!.Value);
 
         var virtualFunctionEntryPoints = _asset.Exports
             .Where(x => x is FunctionExport)
@@ -873,8 +871,9 @@ public partial class KismetDecompiler
             .Where(x => x.Token == EExprToken.EX_VirtualFunction || x.Token == EExprToken.EX_LocalVirtualFunction)
             .Cast<EX_VirtualFunction>()
             .Where(x => x.VirtualFunctionName.ToString().StartsWith("ExecuteUbergraph_"))
-            .Select(x => x.Parameters[0] as EX_IntConst)
-            .Select(x => x.Value);
+            .Select(x => x.Parameters.FirstOrDefault() as EX_IntConst)
+            .Where(x => x != null)
+            .Select(x => x!.Value);
 
         return finalFunctionEntryPoints.Union(virtualFunctionEntryPoints).Contains(codeOffset);
     }
