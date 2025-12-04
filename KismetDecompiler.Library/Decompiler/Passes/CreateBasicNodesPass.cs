@@ -1,4 +1,4 @@
-﻿using UAssetAPI.Kismet.Bytecode.Expressions;
+using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.Kismet.Bytecode;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using KismetCompiler.Library.Decompiler.Context;
@@ -21,7 +21,7 @@ namespace KismetCompiler.Library.Decompiler.Passes
             return root;
         }
 
-        public Node Execute(DecompilerContext context, Node node)
+        public Node Execute(DecompilerContext context, Node? node)
         {
             return CreateFunctionBasicNode(context.Function.ScriptBytecode);
         }

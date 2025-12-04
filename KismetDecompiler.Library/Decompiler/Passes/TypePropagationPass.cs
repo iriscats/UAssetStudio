@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Decompiler.Context;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using System.Diagnostics;
 using UAssetAPI.Kismet.Bytecode;
@@ -8,9 +8,9 @@ namespace KismetCompiler.Library.Decompiler.Passes;
 
 public class TypePropagationPass : IDecompilerPass
 {
-    public Node Execute(DecompilerContext context, Node root)
+    public Node Execute(DecompilerContext context, Node? root)
     {
-        foreach (var node in root.Children)
+        foreach (var node in root!.Children)
         {
             if (node is BlockNode blockNode)
             {
@@ -31,6 +31,6 @@ public class TypePropagationPass : IDecompilerPass
             }
         }
 
-        return root;
+        return root!;
     }
 }

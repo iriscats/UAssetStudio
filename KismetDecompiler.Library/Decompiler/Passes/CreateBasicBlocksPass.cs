@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Decompiler.Context;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using UAssetAPI.Kismet.Bytecode;
 
@@ -6,26 +6,27 @@ namespace KismetCompiler.Library.Decompiler.Passes
 {
     public class CreateBasicBlocksPass : IDecompilerPass
     {
-        public Node Execute(DecompilerContext context, Node root)
+        public Node Execute(DecompilerContext context, Node? root)
         {
             var newNodes = new List<Node>();
+            var r = root!;
 
-            for (int i = 0; i < root.Children.Count; i++)
+            for (int i = 0; i < r.Children.Count; i++)
             {
                 var start = i;
-                var end = root.Children.Count - 1;
-                for (int j = i; j < root.Children.Count; j++)
+                var end = r.Children.Count - 1;
+                for (int j = i; j < r.Children.Count; j++)
                 {
-                    if (root.Children[j] is JumpNode ||
-                        root.Children[j].Source.Token == EExprToken.EX_PushExecutionFlow ||
-                        root.Children[j].Source.Token == EExprToken.EX_EndOfScript)
+                    if (r.Children[j] is JumpNode ||
+                        r.Children[j].Source.Token == EExprToken.EX_PushExecutionFlow ||
+                        r.Children[j].Source.Token == EExprToken.EX_EndOfScript)
                     {
                         // A jump has been found
                         end = j + 1;
                         break;
                     }
 
-                    if (root.Children[j].ReferencedBy.Count != 0 && j != i)
+                    if (r.Children[j].ReferencedBy.Count != 0 && j != i)
                     {
                         // Something jumps to this
                         end = j;
@@ -33,7 +34,7 @@ namespace KismetCompiler.Library.Decompiler.Passes
                     }
                 }
 
-                var nodes = root.Children
+                var nodes = r.Children
                     .Skip(start)
                     .Take(end - start);
                 var blockNode = new BlockNode()
@@ -56,9 +57,9 @@ namespace KismetCompiler.Library.Decompiler.Passes
                 i = end - 1;
             }
 
-            root.Children.Clear();
-            root.Children.AddRange(newNodes);
-            return root;
+            r.Children.Clear();
+            r.Children.AddRange(newNodes);
+            return r;
         }
     }
 }

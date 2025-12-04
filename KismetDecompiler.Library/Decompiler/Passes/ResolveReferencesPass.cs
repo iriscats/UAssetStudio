@@ -1,4 +1,4 @@
-﻿using KismetCompiler.Library.Decompiler.Context;
+using KismetCompiler.Library.Decompiler.Context;
 using KismetCompiler.Library.Decompiler.Context.Nodes;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 
@@ -34,19 +34,19 @@ namespace KismetCompiler.Library.Decompiler.Passes
             }
         }
 
-        public Node Execute(DecompilerContext context, Node root)
+        public Node Execute(DecompilerContext context, Node? root)
         {
-            foreach (var node in root.Children)
+            foreach (var node in root!.Children)
             {
                 foreach (var reference in
-                        FindJumpNodesForIndex(root, node.CodeStartOffset)
-                        .Union(FindPushExecutionFlowsForIndex(root, node.CodeStartOffset)))
+                        FindJumpNodesForIndex(root!, node.CodeStartOffset)
+                        .Union(FindPushExecutionFlowsForIndex(root!, node.CodeStartOffset)))
                 {
                     node.ReferencedBy.Add(reference);
                 }
             }
 
-            return root;
+            return root!;
         }
     }
 }
