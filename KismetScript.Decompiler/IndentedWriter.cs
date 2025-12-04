@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System.Text;
+﻿using System.Text;
 
 namespace KismetScript.Linker.Decompiler;
 
