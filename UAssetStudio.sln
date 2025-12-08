@@ -1,3 +1,4 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35919.96
@@ -19,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetScript.Parser", "KismetScript.Parser\KismetScript.Parser.csproj", "{B1C2D3E4-2345-6789-ABCD-EF012345679A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetScript.Compiler", "KismetScript.Compiler\KismetScript.Compiler.csproj", "{A1B2C3D4-1234-5678-9ABC-DEF012345679}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KismetScript.Utilities", "KismetScript.Utilities\KismetScript.Utilities.csproj", "{862272AA-03DB-490B-A393-4CABA5C6649E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -126,6 +129,18 @@ Global
 		{A1B2C3D4-1234-5678-9ABC-DEF012345679}.Release|x64.Build.0 = Release|Any CPU
 		{A1B2C3D4-1234-5678-9ABC-DEF012345679}.Release|x86.ActiveCfg = Release|Any CPU
 		{A1B2C3D4-1234-5678-9ABC-DEF012345679}.Release|x86.Build.0 = Release|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Debug|x64.Build.0 = Debug|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Debug|x86.Build.0 = Debug|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Release|x64.ActiveCfg = Release|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Release|x64.Build.0 = Release|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Release|x86.ActiveCfg = Release|Any CPU
+		{862272AA-03DB-490B-A393-4CABA5C6649E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
