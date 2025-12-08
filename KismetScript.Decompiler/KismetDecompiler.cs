@@ -597,7 +597,11 @@ public partial class KismetDecompiler
             }
         }
 
-        // staged lines removed; expressions are written directly
+        // Write the line to output if it's not empty
+        if (!string.IsNullOrWhiteSpace(line))
+        {
+            _writer.WriteLine(line);
+        }
     }
 
     private void WriteExpression(Node node, bool isUbergraphFunction)
