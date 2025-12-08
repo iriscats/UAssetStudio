@@ -2,6 +2,7 @@ using KismetScript.Compiler.Compiler;
 using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Compiler.Compiler.Intermediate;
 using KismetScript.Utilities;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UAssetAPI;
 using UAssetAPI.CustomVersions;
@@ -19,6 +20,22 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
     protected bool SerializeLoadedProperties
         => Package.GetCustomVersion<FCoreObjectVersion>() >= FCoreObjectVersion.FProperties;
+
+    private readonly record struct PreservedFieldPath(string[] PathSegments, FPackageIndex ResolvedOwner);
+
+    protected enum PropertyPointerKind
+    {
+        Default,
+        ArrayInner
+    }
+
+    // Dictionary to preserve original field path metadata from existing bytecode
+    // Maps property name -> original path segments/resolved owner
+    private Dictionary<(PropertyPointerKind Kind, string PropertyName), PreservedFieldPath> _originalPropertyFieldPaths = new();
+
+    // Set of variable names whose property pointers had empty Path/owner in the original bytecode
+    // (e.g. certain K2Node temporaries used as EX_Let Value pointers)
+    private HashSet<string> _k2NodeVariablesWithEmptyPath = new();
 
     protected PackageLinker()
     {
@@ -557,20 +574,39 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         }
     }
 
-    protected void FixPropertyPointer(ref KismetPropertyPointer pointer)
+    protected void FixPropertyPointer(ref KismetPropertyPointer pointer, PropertyPointerKind kind = PropertyPointerKind.Default)
     {
         if (pointer is IntermediatePropertyPointer iProperty)
         {
             if (SerializeLoadedProperties)
             {
-                // For UnknownSymbol, still preserve the property name even if we can't resolve the owner
+                var propertyName = iProperty.Symbol.Name;
+
+                // Reuse preserved path metadata when available to match the original asset exactly.
+                if (_originalPropertyFieldPaths.TryGetValue((kind, propertyName), out var preservedFieldPath))
+                {
+                    pointer = new KismetPropertyPointer()
+                    {
+                        Old = new FPackageIndex(0),
+                        New = RehydrateFieldPath(preservedFieldPath),
+                    };
+                    return;
+                }
+
                 FPackageIndex resolvedOwner;
                 if (iProperty.Symbol is UnknownSymbol)
                 {
-                    // Cannot resolve owner for unknown symbols, but UAssetAPI requires a non-zero
-                    // ResolvedOwner.Index to serialize the Path[0] (property name).
-                    // Use index -1 as a placeholder to trigger the serialization path.
-                    resolvedOwner = new FPackageIndex(-1);
+                    resolvedOwner = TryFindPropertyOwner(propertyName);
+
+                    if (resolvedOwner.IsNull() && iProperty.OriginalResolvedOwner != null)
+                    {
+                        resolvedOwner = iProperty.OriginalResolvedOwner;
+                    }
+
+                    if (resolvedOwner.IsNull())
+                    {
+                        resolvedOwner = new FPackageIndex(-1);
+                    }
                 }
                 else
                 {
@@ -582,7 +618,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     Old = new FPackageIndex(0),
                     New = new()
                     {
-                        Path = new[] { AddName(iProperty.Symbol.Name) },
+                        Path = new[] { AddName(propertyName) },
                         ResolvedOwner = resolvedOwner,
                     }
                 };
@@ -597,6 +633,101 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 };
             }
         }
+    }
+
+    private FFieldPath RehydrateFieldPath(PreservedFieldPath preservedFieldPath)
+    {
+        return new FFieldPath()
+        {
+            Path = preservedFieldPath.PathSegments.Select(AddName).ToArray(),
+            ResolvedOwner = preservedFieldPath.ResolvedOwner,
+        };
+    }
+
+    private void FixLetValuePropertyPointer(ref KismetPropertyPointer pointer)
+    {
+        if (pointer is IntermediatePropertyPointer iProperty &&
+            SerializeLoadedProperties &&
+            _k2NodeVariablesWithEmptyPath.Contains(iProperty.Symbol.Name))
+        {
+            pointer = new KismetPropertyPointer()
+            {
+                Old = new FPackageIndex(0),
+                New = new()
+                {
+                    Path = Array.Empty<FName>(),
+                    ResolvedOwner = new FPackageIndex(0),
+                }
+            };
+            return;
+        }
+
+        FixPropertyPointer(ref pointer);
+    }
+
+    /// <summary>
+    /// Try to find the package index of the owner class/struct that contains a property with the given name.
+    /// This is used when the property symbol cannot be fully resolved during compilation.
+    /// </summary>
+    protected virtual FPackageIndex TryFindPropertyOwner(string propertyName)
+    {
+        // First, search through exports for structs/classes with LoadedProperties
+        foreach (var export in Package.Exports)
+        {
+            if (export is StructExport structExport)
+            {
+                // Check if this struct has a property with the given name
+                foreach (var fprop in structExport.LoadedProperties ?? Array.Empty<FProperty>())
+                {
+                    if (fprop.Name.ToString() == propertyName)
+                    {
+                        // Found the property in this struct/class, return its export index
+                        return FPackageIndex.FromExport(Package.Exports.IndexOf(export));
+                    }
+                }
+
+                // Also check UProperty children for older UE versions
+                foreach (var child in structExport.Children ?? Array.Empty<FPackageIndex>())
+                {
+                    if (child.IsExport())
+                    {
+                        var childExport = child.ToExport(Package);
+                        if (childExport is PropertyExport propExport &&
+                            propExport.ObjectName.ToString() == propertyName)
+                        {
+                            return FPackageIndex.FromExport(Package.Exports.IndexOf(export));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Next, search through imports for classes/structs that might have this property as a child
+        for (int i = 0; i < Package.Imports.Count; i++)
+        {
+            var import = Package.Imports[i];
+            var importIndex = FPackageIndex.FromImport(i);
+
+            // Check if this is a class/struct type import
+            if (import.ClassName.ToString() == "Class" || import.ClassName.ToString() == "WidgetBlueprintGeneratedClass" ||
+                import.ClassName.ToString() == "BlueprintGeneratedClass" || import.ClassName.ToString() == "ScriptStruct")
+            {
+                // Try to find a property with this name as a child import
+                for (int j = 0; j < Package.Imports.Count; j++)
+                {
+                    var candidateImport = Package.Imports[j];
+                    if (candidateImport.OuterIndex == importIndex &&
+                        candidateImport.ObjectName.ToString() == propertyName)
+                    {
+                        // Found a property import with this name that belongs to this class
+                        return importIndex;
+                    }
+                }
+            }
+        }
+
+        // Not found
+        return new FPackageIndex(0);
     }
 
     protected void FixPackageIndex(ref FPackageIndex packageIndex)
@@ -827,7 +958,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     break;
 
                 case EX_ArrayConst expr:
-                    FixPropertyPointer(ref expr.InnerProperty);
+                    FixPropertyPointer(ref expr.InnerProperty, PropertyPointerKind.ArrayInner);
                     break;
 
                 case EX_ClassSparseDataVariable expr:
@@ -847,7 +978,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     break;
 
                 case EX_Let expr:
-                    FixPropertyPointer(ref expr.Value);
+                    FixLetValuePropertyPointer(ref expr.Value);
                     break;
 
                 case EX_LetValueOnPersistentFrame expr:
@@ -1130,6 +1261,13 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             null;
 
         var functionExport = FindChildExport<FunctionExport>(classExport, functionContext.Symbol.Name);
+
+        // Preserve original property owners from existing bytecode before modifying
+        if (functionExport != null && functionExport.ScriptBytecode != null)
+        {
+            PreserveOriginalPropertyOwners(functionExport.ScriptBytecode);
+        }
+
         if (functionExport == null)
             functionExport = CreateFunctionExport(functionContext);
 
@@ -1153,6 +1291,101 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         }
 
         functionExport!.ScriptBytecode = GetFixedBytecode(functionContext.Bytecode);
+
+        // Clear the preserved owners after linking this function
+        ClearPreservedPropertyOwners();
+    }
+
+    /// <summary>
+    /// Clears the preserved property owners dictionary and K2Node tracking
+    /// </summary>
+    protected void ClearPreservedPropertyOwners()
+    {
+        _originalPropertyFieldPaths.Clear();
+        _k2NodeVariablesWithEmptyPath.Clear();
+    }
+
+    /// <summary>
+    /// Extracts and preserves ResolvedOwner values from original bytecode before it's replaced.
+    /// This allows us to maintain correct property ownership when recompiling.
+    /// </summary>
+    protected void PreserveOriginalPropertyOwners(KismetExpression[] originalBytecode)
+    {
+        foreach (var expr in originalBytecode.Flatten())
+        {
+            KismetPropertyPointer? pointer = expr switch
+            {
+                EX_ArrayConst arrayConst => arrayConst.InnerProperty,
+                EX_ClassSparseDataVariable classSparseDataVariable => classSparseDataVariable.Variable,
+                EX_Context ctx => ctx.RValuePointer,
+                EX_DefaultVariable defaultVariable => defaultVariable.Variable,
+                EX_InstanceVariable instanceVariable => instanceVariable.Variable,
+                EX_Let let => let.Value,
+                EX_LetValueOnPersistentFrame letValueOnPersistentFrame => letValueOnPersistentFrame.DestinationProperty,
+                EX_LocalOutVariable localOutVariable => localOutVariable.Variable,
+                EX_LocalVariable localVariable => localVariable.Variable,
+                EX_PropertyConst propertyConst => propertyConst.Property,
+                EX_SetConst setConst => setConst.InnerProperty,
+                EX_StructMemberContext structMemberContext => structMemberContext.StructMemberExpression,
+                EX_MapConst mapConst => mapConst.KeyProperty, // Handle both key and value separately
+                _ => null
+            };
+            var pointerKind = expr switch
+            {
+                EX_ArrayConst => PropertyPointerKind.ArrayInner,
+                _ => PropertyPointerKind.Default
+            };
+
+            // Preserve properties with non-empty Path
+            if (pointer?.New != null && pointer.New.Path.Length > 0)
+            {
+                var propertyName = pointer.New.Path[0].ToString();
+                TryPreserveFieldPath(propertyName, pointer.New, pointerKind);
+            }
+            // Track variables whose property pointers had empty Path/owner in the original bytecode.
+            // These typically appear as EX_Let.Value where the matching Variable property
+            // pointer (EX_LocalVariable / EX_InstanceVariable) carries the actual name.
+            else if (pointer?.New != null && pointer.New.Path.Length == 0 && pointer.New.ResolvedOwner.Index == 0)
+            {
+                switch (expr)
+                {
+                    case EX_Let letExpr:
+                        if (letExpr.Variable is EX_LocalVariable localVar &&
+                            localVar.Variable?.New != null &&
+                            localVar.Variable.New.Path.Length > 0)
+                        {
+                            var name = localVar.Variable.New.Path[0].ToString();
+                            _k2NodeVariablesWithEmptyPath.Add(name);
+                        }
+                        else if (letExpr.Variable is EX_InstanceVariable instVar &&
+                                 instVar.Variable?.New != null &&
+                                 instVar.Variable.New.Path.Length > 0)
+                        {
+                            var name = instVar.Variable.New.Path[0].ToString();
+                            _k2NodeVariablesWithEmptyPath.Add(name);
+                        }
+                        break;
+                }
+            }
+
+            // Handle MapConst value property separately
+            if (expr is EX_MapConst mapConstValue && mapConstValue.ValueProperty?.New != null && mapConstValue.ValueProperty.New.Path.Length > 0)
+            {
+                var propertyName = mapConstValue.ValueProperty.New.Path[0].ToString();
+                TryPreserveFieldPath(propertyName, mapConstValue.ValueProperty.New, PropertyPointerKind.Default);
+            }
+        }
+    }
+
+    private void TryPreserveFieldPath(string propertyName, FFieldPath fieldPath, PropertyPointerKind kind)
+    {
+        if (_originalPropertyFieldPaths.ContainsKey((kind, propertyName)))
+        {
+            return;
+        }
+
+        var pathSegments = fieldPath.Path.Select(name => name.ToString()).ToArray();
+        _originalPropertyFieldPaths[(kind, propertyName)] = new PreservedFieldPath(pathSegments, fieldPath.ResolvedOwner);
     }
 
     protected abstract FPackageIndex EnsurePackageImported(string objectName, bool bImportOptional = false);

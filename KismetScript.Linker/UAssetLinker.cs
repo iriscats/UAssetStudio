@@ -163,6 +163,13 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             null;
 
         var functionExport = FindChildExport<FunctionExport>(classExport, functionContext.Symbol.Name);
+
+        // Preserve original property owners from existing bytecode before modifying
+        if (functionExport != null && functionExport.ScriptBytecode != null)
+        {
+            PreserveOriginalPropertyOwners(functionExport.ScriptBytecode);
+        }
+
         if (functionExport == null)
             functionExport = CreateFunctionExport(functionContext);
 
@@ -186,6 +193,9 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         }
 
         functionExport!.ScriptBytecode = GetFixedBytecode(functionContext.Bytecode);
+
+        // Clear the preserved owners after linking this function
+        ClearPreservedPropertyOwners();
     }
 
     protected override FPackageIndex CreateProcedureImport(ProcedureSymbol symbol)
