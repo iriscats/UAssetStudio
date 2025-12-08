@@ -234,13 +234,10 @@ public class TypeResolver
 
     private void ResolveTypesInClassDeclaration(ClassDeclaration classDeclaration)
     {
-        // Enter a new scope for class members to avoid identifier collisions
-        PushScope();
         foreach (var decl in classDeclaration.Declarations)
         {
             ResolveTypesInDeclaration(decl);
         }
-        PopScope();
     }
 
     internal void ResolveTypesInExpression(Expression expression)
@@ -257,6 +254,12 @@ public class TypeResolver
             foreach (var expr in newExpression.Initializer)
             {
                 ResolveTypesInExpression(expr);
+            }
+
+            if (!newExpression.IsArray)
+            {
+                ResolveTypesInTypeIdentifier(newExpression.TypeIdentifier);
+                newExpression.ExpressionValueKind = newExpression.TypeIdentifier.ValueKind;
             }
         }
         else if (expression is SubscriptOperator subscriptOperator)

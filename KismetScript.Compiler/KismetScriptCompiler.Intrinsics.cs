@@ -143,21 +143,61 @@ public partial class KismetScriptCompiler
                 }, new[] { GetLabel(callOperator.Arguments[0]) });
             case EExprToken.EX_Context:
                 {
-                    var objectExpr = CompileSubExpression(callOperator.Arguments[0]);
-                    var context = GetContextForExpression(callOperator.Arguments[0].Expression);
-                    PushContext(context);
-                    try
+                    // Support simplified 2-argument form: EX_Context(object, contextExpression)
+                    // This is used by the decompiler to preserve Context information
+                    if (callOperator.Arguments.Count == 2)
                     {
-                        return new CompiledExpressionContext(callOperator, offset, new EX_Context()
+                        var objectExpr = CompileSubExpression(callOperator.Arguments[0]);
+                        var context = GetContextForExpression(callOperator.Arguments[0].Expression);
+
+                        PushContext(context);
+                        try
                         {
-                            ObjectExpression = objectExpr,
-                            RValuePointer = GetPropertyPointer(callOperator.Arguments[2]),
-                            ContextExpression = CompileSubExpression(callOperator.Arguments[3]),
-                        }, new[] { GetLabel(callOperator.Arguments[1]) });
+                            // Try to get the property pointer from the context expression before compiling it
+                            // This is needed for InstanceVariable expressions
+                            TryGetPropertyPointer(callOperator.Arguments[1].Expression, out var rvalueFromExpr);
+
+                            // Compile the context expression with the proper context
+                            var contextExpr = CompileSubExpression(callOperator.Arguments[1]);
+
+                            // Use the property pointer from the expression if available,
+                            // otherwise use the current RValue context (set by enclosing assignment),
+                            // finally fall back to null pointer
+                            var rvaluePointer = rvalueFromExpr ?? RValue ?? new KismetPropertyPointer() { Old = new FPackageIndex(0), New = new FFieldPath() };
+
+                            return new CompiledExpressionContext(callOperator, offset, new EX_Context()
+                            {
+                                ObjectExpression = objectExpr,
+                                RValuePointer = rvaluePointer,
+                                ContextExpression = contextExpr,
+                            });
+                        }
+                        finally
+                        {
+                            PopContext();
+                        }
                     }
-                    finally
+                    else
                     {
-                        PopContext();
+                        // Original 4-argument form: EX_Context(object, offset, rvalue, contextExpression)
+                        var objectExpr = CompileSubExpression(callOperator.Arguments[0]);
+                        var context = GetContextForExpression(callOperator.Arguments[0].Expression);
+                        var rvaluePointer = GetPropertyPointer(callOperator.Arguments[2]);
+
+                        PushContext(context);
+                        try
+                        {
+                            return new CompiledExpressionContext(callOperator, offset, new EX_Context()
+                            {
+                                ObjectExpression = objectExpr,
+                                RValuePointer = rvaluePointer,
+                                ContextExpression = CompileSubExpression(callOperator.Arguments[3]),
+                            }, new[] { GetLabel(callOperator.Arguments[1]) });
+                        }
+                        finally
+                        {
+                            PopContext();
+                        }
                     }
                 }
             case EExprToken.EX_Context_FailSilent:
@@ -176,7 +216,7 @@ public partial class KismetScriptCompiler
             case EExprToken.EX_FinalFunction:
                 return new CompiledExpressionContext(callOperator, offset, new EX_FinalFunction()
                 {
-                    StackNode = GetPackageIndex(callOperator.Arguments[0]),
+                    StackNode = GetPackageIndex(callOperator.Arguments[0].Expression, context: Context),
                     Parameters = callOperator.Arguments.Skip(1).Select(CompileSubExpression).ToArray()
                 });
             case EExprToken.EX_IntConst:
