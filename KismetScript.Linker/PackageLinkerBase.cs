@@ -2,7 +2,6 @@ using KismetScript.Compiler.Compiler;
 using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Compiler.Compiler.Intermediate;
 using KismetScript.Utilities;
-using System.Linq;
 using System.Text.RegularExpressions;
 using UAssetAPI;
 using UAssetAPI.CustomVersions;
@@ -570,6 +569,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         }
         else
         {
+            Console.WriteLine($"CreatePackageIndexForSymbol: {symbol.Name}");
             throw new NotImplementedException();
         }
     }

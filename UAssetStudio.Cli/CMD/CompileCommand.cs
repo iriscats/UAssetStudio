@@ -42,7 +42,7 @@ namespace UAssetStudio.Cli.CMD
                     .LinkCompiledScript(script)
                     .Build();
                 var dir = outdir ?? Path.GetDirectoryName(scriptPath) ?? ".";
-                var outFile = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(scriptPath, ".compiled.uasset")));
+                var outFile = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(scriptPath, ".new.uasset")));
                 newAsset.Write(outFile);
                 Console.WriteLine($"Compiled: {scriptPath} -> {outFile}");
             }, ueVersion, mappings, scriptArg, assetOpt, outdirOpt);
