@@ -569,7 +569,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         }
         else
         {
-            Console.WriteLine($"CreatePackageIndexForSymbol: {symbol.Name}");
+            Console.WriteLine($"NotImplementedException CreatePackageIndexForSymbol: {symbol.Name}");
             throw new NotImplementedException();
         }
     }
