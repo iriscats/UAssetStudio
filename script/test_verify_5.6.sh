@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Paths (adjust if your environment differs)
-ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/test_case_5_6/MI_SpawnMods.uasset"
+ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/test_case_5_6/BP_PlayerControllerBase.uasset"
 USMAP_PATH="/Users/bytedance/Project/RogueCore/DRG_RC_Mappings.usmap"
 REPO_ROOT="/Users/bytedance/Project/UAssetStudio"
 CLI_PROJ="$REPO_ROOT/UAssetStudio.Cli/UAssetStudio.Cli.csproj"
