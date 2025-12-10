@@ -18,5 +18,6 @@
     <ProjectReference Include="..\KismetScript.Decompiler\KismetScript.Decompiler.csproj" />
     <ProjectReference Include="..\KismetScript.Linker\KismetScript.Linker.csproj" />
     <ProjectReference Include="..\KismetScript.Parser\KismetScript.Parser.csproj" />
+    <ProjectReference Include="..\AssetRegistry.Serializer\AssetRegistry.Serializer.csproj" />
   </ItemGroup>
 </Project>

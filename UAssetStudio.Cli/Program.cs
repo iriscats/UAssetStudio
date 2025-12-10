@@ -27,6 +27,9 @@ internal static class Program
         var verify = VerifyCommandBuilder.Create(ueVersion, mappings);
         root.Add(verify);
 
+        var assetRegistry = AssetRegistryCommandBuilder.Create();
+        root.Add(assetRegistry);
+
         return root.Invoke(args);
     }
 }
