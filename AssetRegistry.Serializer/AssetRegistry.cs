@@ -12,11 +12,11 @@ namespace AssetRegistry.Serializer
 {
     public class FAssetData
     {
-        public FName ObjectPath { get; set; }
-        public FName PackagePath { get; set; }
-        public FName AssetClass { get; set; }
-        public FName PackageName { get; set; }
-        public FName AssetName { get; set; }
+        public FName ObjectPath { get; set; } = default!;
+        public FName PackagePath { get; set; } = default!;
+        public FName AssetClass { get; set; } = default!;
+        public FName PackageName { get; set; } = default!;
+        public FName AssetName { get; set; } = default!;
         public List<Tuple<FString, FString>> TagAndValue { get; set; } = new List<Tuple<FString, FString>>();
         public List<uint> ChunkIDs { get; set; } = new List<uint>();
         public uint PackageTags { get; set; }
@@ -25,7 +25,7 @@ namespace AssetRegistry.Serializer
 
     public class AssetRegistry
     {
-        public byte[] Header { get; set; } //Probably a guid
+        public byte[] Header { get; set; } = Array.Empty<byte>(); //Probably a guid
         public uint Unknown { get; set; }
         public List<FAssetData> fAssetDatas { get; set; } = new List<FAssetData>();
         public Dictionary<FString, uint> keyValuePairs { get; set; } = new Dictionary<FString, uint>();
@@ -199,7 +199,7 @@ namespace AssetRegistry.Serializer
             {
                 value = keyValuePairs[fString];
             }
-            catch (KeyNotFoundException e)
+            catch (KeyNotFoundException)
             {
                 keyValuePairs.Add(fString, (uint)keyValuePairs.Count);
                 value = keyValuePairs[fString];
