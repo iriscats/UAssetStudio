@@ -102,6 +102,10 @@ public partial class KismetScriptCompiler
             {
                 script.Classes.Add(CompileClass(classDeclaration));
             }
+            else if (declaration is ObjectDeclaration objectDeclaration)
+            {
+                script.Objects.Add(CompileObject(objectDeclaration));
+            }
             else
             {
                 throw new UnexpectedSyntaxError(declaration);
@@ -504,7 +508,76 @@ public partial class KismetScriptCompiler
         return new CompiledVariableContext(symbol)
         {
             Type = null, // TODO
+            Initializer = variableDeclaration.Initializer != null
+                ? CompilePropertyValue(variableDeclaration.Initializer)
+                : null
         };
+    }
+
+    /// <summary>
+    /// Compiles an object declaration (sub-object with property values).
+    /// </summary>
+    /// <param name="objectDeclaration"></param>
+    /// <returns></returns>
+    private CompiledObjectContext CompileObject(ObjectDeclaration objectDeclaration)
+    {
+        var context = new CompiledObjectContext
+        {
+            Name = objectDeclaration.Identifier.Text,
+            ClassName = objectDeclaration.ClassIdentifier.Text
+        };
+
+        foreach (var prop in objectDeclaration.Properties)
+        {
+            context.Properties.Add(new CompiledPropertyAssignment
+            {
+                Type = prop.Type.Text,
+                Name = prop.Name.Text,
+                Value = CompilePropertyValue(prop.Value)
+            });
+        }
+
+        return context;
+    }
+
+    /// <summary>
+    /// Compiles an expression into a property value.
+    /// </summary>
+    /// <param name="expression"></param>
+    /// <returns></returns>
+    private CompiledPropertyValue? CompilePropertyValue(Expression expression)
+    {
+        if (expression == null)
+            return null;
+
+        return expression switch
+        {
+            FloatLiteral floatLit => new CompiledPropertyValue { FloatValue = floatLit.Value },
+            IntLiteral intLit => new CompiledPropertyValue { IntValue = intLit.Value },
+            BoolLiteral boolLit => new CompiledPropertyValue { BoolValue = boolLit.Value },
+            StringLiteral strLit => new CompiledPropertyValue { StringValue = strLit.Value },
+            Identifier id => new CompiledPropertyValue { ObjectReference = id.Text },
+            NullExpression => new CompiledPropertyValue { ObjectReference = null },
+            InitializerList initList => CompileArrayValue(initList),
+            _ => throw new CompilationError(expression, $"Unsupported property value expression type: {expression.GetType().Name}")
+        };
+    }
+
+    /// <summary>
+    /// Compiles an initializer list into an array property value.
+    /// </summary>
+    /// <param name="initList"></param>
+    /// <returns></returns>
+    private CompiledPropertyValue CompileArrayValue(InitializerList initList)
+    {
+        var arrayValue = new List<CompiledPropertyValue>();
+        foreach (var element in initList.Expressions)
+        {
+            var compiledElement = CompilePropertyValue(element);
+            if (compiledElement != null)
+                arrayValue.Add(compiledElement);
+        }
+        return new CompiledPropertyValue { ArrayValue = arrayValue };
     }
 
     /// <summary>

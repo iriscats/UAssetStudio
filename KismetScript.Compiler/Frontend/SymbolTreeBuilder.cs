@@ -118,6 +118,12 @@ public class SymbolTreeBuilder
                 }
                 return symbol;
             }
+            else if (declaration is ObjectDeclaration)
+            {
+                // ObjectDeclaration is a data-only construct for property values,
+                // it doesn't create a symbol in the symbol tree
+                return null;
+            }
 
             throw new NotImplementedException();
         }
@@ -175,6 +181,9 @@ public class SymbolTreeBuilder
         foreach (var declaration in compilationUnit.Declarations.Except(packageImports.SelectMany(x => x.Declarations)))
         {
             var declarationSymbol = CreateDeclarationSymbol(declaration, null, false);
+            if (declarationSymbol == null)
+                continue; // Skip ObjectDeclaration and other data-only constructs
+
             rootScope.DeclareSymbol(declarationSymbol);
 
             void DeclareUbergraphFunctionGlobalSymbols(Symbol symbol)

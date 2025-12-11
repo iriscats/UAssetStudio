@@ -12,6 +12,8 @@ using UAssetAPI;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
+using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
 namespace KismetScript.Decompiler;
@@ -124,6 +126,260 @@ public partial class KismetDecompiler
     {
     }
 
+    #region CDO and Property Value Support
+
+    /// <summary>
+    /// Find the Class Default Object (CDO) export for a class.
+    /// CDO names follow the pattern "Default__ClassName".
+    /// </summary>
+    private NormalExport? FindCDOForClass(ClassExport classExport)
+    {
+        var cdoName = $"Default__{classExport.ObjectName}";
+        return _asset.Exports
+            .OfType<NormalExport>()
+            .FirstOrDefault(x => x.ObjectName.ToString() == cdoName);
+    }
+
+    /// <summary>
+    /// Find sub-object exports that are children of the CDO.
+    /// These are objects with OuterIndex pointing to the CDO.
+    /// </summary>
+    private IEnumerable<NormalExport> FindSubObjectExports(NormalExport cdoExport)
+    {
+        return _asset.Exports
+            .OfType<NormalExport>()
+            .Where(x => !x.OuterIndex.IsNull() &&
+                        x.OuterIndex.ToExport(_asset) == cdoExport &&
+                        !x.ObjectName.ToString().StartsWith("Default__"));
+    }
+
+    /// <summary>
+    /// Write object declarations for sub-objects of the CDO.
+    /// Syntax: object Name : ClassName { Type PropName = Value; ... }
+    /// </summary>
+    private void WriteSubObjectDeclarations(NormalExport cdoExport)
+    {
+        var subObjects = FindSubObjectExports(cdoExport).ToList();
+        if (!subObjects.Any()) return;
+
+        foreach (var subObj in subObjects)
+        {
+            var className = GetExportClassName(subObj);
+            _writer.WriteLine($"object {FormatIdentifier(subObj.ObjectName.ToString())} : {FormatIdentifier(className)} {{");
+            _writer.Push();
+
+            foreach (var propData in subObj.Data)
+            {
+                var propType = InferPropertyType(propData);
+                var propName = FormatIdentifier(propData.Name.ToString());
+                var propValue = GetDecompiledPropertyValue(propData);
+                _writer.WriteLine($"{propType} {propName} = {propValue};");
+            }
+
+            _writer.Pop();
+            _writer.WriteLine("}");
+            _writer.WriteLine();
+        }
+    }
+
+    /// <summary>
+    /// Get the class name for an export.
+    /// </summary>
+    private string GetExportClassName(Export export)
+    {
+        if (export.ClassIndex.IsImport())
+            return _asset.Imports[-export.ClassIndex.Index - 1].ObjectName.ToString();
+        if (export.ClassIndex.IsExport())
+            return _asset.Exports[export.ClassIndex.Index - 1].ObjectName.ToString();
+        return "Object";
+    }
+
+    /// <summary>
+    /// Infer the KMS type from a PropertyData instance.
+    /// </summary>
+    private string InferPropertyType(PropertyData propData)
+    {
+        return propData switch
+        {
+            FloatPropertyData => "float",
+            DoublePropertyData => "double",
+            IntPropertyData => "int",
+            Int64PropertyData => "int64",
+            Int16PropertyData => "int16",
+            Int8PropertyData => "int8",
+            UInt16PropertyData => "uint16",
+            UInt32PropertyData => "uint32",
+            UInt64PropertyData => "uint64",
+            BoolPropertyData => "bool",
+            BytePropertyData => "byte",
+            StrPropertyData => "string",
+            NamePropertyData => "Name",
+            TextPropertyData => "Text",
+            ObjectPropertyData objProp => GetObjectPropertyType(objProp),
+            ArrayPropertyData arrayProp => GetArrayPropertyType(arrayProp),
+            StructPropertyData structProp => $"Struct<{structProp.StructType}>",
+            EnumPropertyData enumProp => $"Enum<{enumProp.EnumType}>",
+            SoftObjectPropertyData => "SoftObject",
+            _ => propData.PropertyType.ToString().Replace("Property", "")
+        };
+    }
+
+    /// <summary>
+    /// Get the type string for an ObjectPropertyData.
+    /// </summary>
+    private string GetObjectPropertyType(ObjectPropertyData objProp)
+    {
+        if (objProp.Value.IsNull())
+            return "Object";
+
+        string className;
+        if (objProp.Value.IsImport())
+        {
+            var import = _asset.Imports[-objProp.Value.Index - 1];
+            className = import.ClassName.ToString();
+        }
+        else if (objProp.Value.IsExport())
+        {
+            var export = _asset.Exports[objProp.Value.Index - 1];
+            className = GetExportClassName(export);
+        }
+        else
+        {
+            className = "Object";
+        }
+
+        return $"Object<{FormatIdentifier(className)}>";
+    }
+
+    /// <summary>
+    /// Get the type string for an ArrayPropertyData.
+    /// </summary>
+    private string GetArrayPropertyType(ArrayPropertyData arrayProp)
+    {
+        var innerType = arrayProp.ArrayType?.ToString() ?? "Object";
+
+        // Convert inner type to decompiled form
+        var decompiledInnerType = innerType switch
+        {
+            "FloatProperty" => "float",
+            "IntProperty" => "int",
+            "BoolProperty" => "bool",
+            "StrProperty" => "string",
+            "ByteProperty" => "byte",
+            "ObjectProperty" => "Object",
+            "StructProperty" => arrayProp.DummyStruct != null
+                ? $"Struct<{arrayProp.DummyStruct.StructType}>"
+                : "Struct",
+            _ => innerType.Replace("Property", "")
+        };
+
+        // For ObjectProperty arrays, try to get the actual object type
+        if (innerType == "ObjectProperty" && arrayProp.Value?.Length > 0)
+        {
+            var firstElement = arrayProp.Value[0] as ObjectPropertyData;
+            if (firstElement != null && !firstElement.Value.IsNull())
+            {
+                decompiledInnerType = GetObjectPropertyType(firstElement);
+            }
+        }
+
+        return $"Array<{decompiledInnerType}>";
+    }
+
+    /// <summary>
+    /// Convert a PropertyData value to its KMS representation.
+    /// </summary>
+    private string GetDecompiledPropertyValue(PropertyData propData)
+    {
+        return propData switch
+        {
+            FloatPropertyData floatProp => FormatFloat(floatProp.Value),
+            DoublePropertyData doubleProp => $"{doubleProp.Value}d",
+            IntPropertyData intProp => intProp.Value.ToString(),
+            Int64PropertyData int64Prop => $"{int64Prop.Value}L",
+            Int16PropertyData int16Prop => int16Prop.Value.ToString(),
+            Int8PropertyData int8Prop => int8Prop.Value.ToString(),
+            UInt16PropertyData uint16Prop => uint16Prop.Value.ToString(),
+            UInt32PropertyData uint32Prop => $"{uint32Prop.Value}u",
+            UInt64PropertyData uint64Prop => $"{uint64Prop.Value}uL",
+            BoolPropertyData boolProp => boolProp.Value ? "true" : "false",
+            BytePropertyData byteProp => byteProp.Value.ToString(),
+            StrPropertyData strProp => FormatString(strProp.Value?.ToString() ?? ""),
+            NamePropertyData nameProp => FormatString(nameProp.Value?.ToString() ?? ""),
+            TextPropertyData textProp => FormatString(textProp.Value?.ToString() ?? ""),
+            ObjectPropertyData objProp => GetObjectReference(objProp.Value),
+            ArrayPropertyData arrayProp => GetArrayLiteral(arrayProp),
+            StructPropertyData structProp => GetStructLiteral(structProp),
+            EnumPropertyData enumProp => FormatIdentifier(enumProp.Value?.ToString() ?? "None"),
+            SoftObjectPropertyData softProp => FormatString(softProp.Value.AssetPath.AssetName?.ToString() ?? ""),
+            _ => $"/* unsupported: {propData.PropertyType} */"
+        };
+    }
+
+    /// <summary>
+    /// Format a float value with proper suffix.
+    /// </summary>
+    private string FormatFloat(float value)
+    {
+        var str = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        // Ensure there's a decimal point or 'E' so it's recognized as float
+        if (!str.Contains('.') && !str.Contains('E') && !str.Contains('e'))
+        {
+            str += ".0";
+        }
+        return str + "f";
+    }
+
+    /// <summary>
+    /// Get the object reference as a symbol name.
+    /// </summary>
+    private string GetObjectReference(FPackageIndex index)
+    {
+        if (index.IsNull())
+            return "null";
+
+        if (index.IsImport())
+        {
+            var import = _asset.Imports[-index.Index - 1];
+            return FormatIdentifier(import.ObjectName.ToString());
+        }
+
+        if (index.IsExport())
+        {
+            var export = _asset.Exports[index.Index - 1];
+            return FormatIdentifier(export.ObjectName.ToString());
+        }
+
+        return "null";
+    }
+
+    /// <summary>
+    /// Convert an ArrayPropertyData to its array literal representation.
+    /// </summary>
+    private string GetArrayLiteral(ArrayPropertyData arrayProp)
+    {
+        if (arrayProp.Value == null || arrayProp.Value.Length == 0)
+            return "[]";
+
+        var elements = arrayProp.Value.Select(GetDecompiledPropertyValue);
+        return $"[{string.Join(", ", elements)}]";
+    }
+
+    /// <summary>
+    /// Convert a StructPropertyData to its literal representation.
+    /// </summary>
+    private string GetStructLiteral(StructPropertyData structProp)
+    {
+        if (structProp.Value == null || structProp.Value.Count == 0)
+            return "{}";
+
+        var fields = structProp.Value.Select(p =>
+            $"{FormatIdentifier(p.Name.ToString())}: {GetDecompiledPropertyValue(p)}");
+        return $"{{ {string.Join(", ", fields)} }}";
+    }
+
+    #endregion
+
     private void WriteClass()
     {
         var classBaseClass = _asset.GetName(_class.SuperStruct);
@@ -158,7 +414,25 @@ public partial class KismetDecompiler
                 return idx >= 0 ? idx : _asset.Exports.IndexOf(x);
             });
 
-    
+        // Find CDO (Class Default Object) for this class
+        var cdoExport = FindCDOForClass(_class);
+
+        // Build property value map from CDO
+        var cdoPropertyValues = new Dictionary<string, PropertyData>();
+        if (cdoExport != null)
+        {
+            foreach (var propData in cdoExport.Data)
+            {
+                cdoPropertyValues[propData.Name.ToString()] = propData;
+            }
+        }
+
+        // Write sub-object declarations before class
+        if (cdoExport != null)
+        {
+            WriteSubObjectDeclarations(cdoExport);
+        }
+
         var classModifiers = GetClassModifiers(_class);
         var classAttributes = GetClassAttributes(_class);
 
@@ -173,9 +447,26 @@ public partial class KismetDecompiler
         _writer.WriteLine($"{nameText} {{");
         _writer.Push();
 
+        // Write CDO properties with values as initializers (no type declaration needed for CDO properties)
+        if (cdoExport != null && cdoExport.Data.Any())
+        {
+            foreach (var propData in cdoExport.Data)
+            {
+                var propType = InferPropertyType(propData);
+                var propName = FormatIdentifier(propData.Name.ToString());
+                var propValue = GetDecompiledPropertyValue(propData);
+                _writer.WriteLine($"{propType} {propName} = {propValue};");
+            }
+        }
+
+        // Write class-declared properties (without initializers, from PropertyExport/LoadedProperties)
         foreach (var prop in classProperties)
         {
-            _writer.WriteLine($"{GetDecompiledPropertyText(prop)};");
+            // Skip if this property is already written from CDO
+            if (!cdoPropertyValues.ContainsKey(prop.Name))
+            {
+                _writer.WriteLine($"{GetDecompiledPropertyText(prop)};");
+            }
         }
 
         foreach (var fun in classFunctions)

@@ -411,8 +411,8 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
                 RawValue = null,
 
-                // TODO verify if this works
-                Inner = CreateFProperty((VariableSymbol)symbol.InnerSymbol!),
+                // Create inner property based on the inner symbol type
+                Inner = CreateFPropertyForArrayInner(symbol),
             },
             "DelegateProperty" => new FDelegateProperty()
             {
@@ -453,6 +453,42 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             },
             _ => throw new NotImplementedException(serializedType),
         };
+    }
+
+    /// <summary>
+    /// Creates an FProperty for the inner type of an array property.
+    /// This handles cases where InnerSymbol is a ClassSymbol (for Object types).
+    /// </summary>
+    protected FProperty CreateFPropertyForArrayInner(VariableSymbol symbol)
+    {
+        var innerSymbol = symbol.InnerSymbol;
+
+        // If the inner symbol is a VariableSymbol, use the standard method
+        if (innerSymbol is VariableSymbol variableSymbol)
+        {
+            return CreateFProperty(variableSymbol);
+        }
+
+        // If the inner symbol is a ClassSymbol, create an ObjectProperty for it
+        if (innerSymbol is ClassSymbol classSymbol)
+        {
+            return new FObjectProperty()
+            {
+                SerializedType = AddName("ObjectProperty"),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 8,
+                PropertyFlags = EPropertyFlags.CPF_None,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+                PropertyClass = FindPackageIndexInAsset(classSymbol),
+            };
+        }
+
+        throw new NotImplementedException($"Cannot create array inner property for symbol type: {innerSymbol?.GetType().Name ?? "null"}");
     }
 
     protected (FProperty Property, FPackageIndex ExportIndex, PropertyExport? Export) CreatePropertyAsFProperty(VariableSymbol symbol)

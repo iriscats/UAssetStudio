@@ -43,6 +43,7 @@ declarationStatement
 	| enumTypeDeclarationStatement
 	| labelDeclarationStatement
 	| classDeclarationStatement
+	| objectDeclarationStatement
 	;
 
 namespaceIdentifier
@@ -52,6 +53,14 @@ namespaceIdentifier
 classDeclarationStatement
 	: attributeList? modifier* (Class | Struct | Identifier) Identifier (':' Identifier (',' Identifier)* )? '{' declarationStatement* '}'
 	| attributeList? modifier* (Class | Struct) Identifier (':' Identifier (',' Identifier)* )? Semicolon
+	;
+
+objectDeclarationStatement
+	: attributeList? Object Identifier ':' Identifier '{' objectPropertyAssignment* '}'
+	;
+
+objectPropertyAssignment
+	: typeIdentifier Identifier '=' expression ';'
 	;
 
 procedureDeclarationStatement
@@ -251,6 +260,7 @@ Class:		'class';
 Struct:		'struct';
 Interface:	'interface';
 Ref:		'ref';
+Object:		'object';
 
 // Modifiers
 Public:		'public';

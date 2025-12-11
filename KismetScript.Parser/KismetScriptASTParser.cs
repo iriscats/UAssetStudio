@@ -402,6 +402,14 @@ public class KismetScriptASTParser
 
             declaration = classDeclaration;
         }
+        else if (TryGet(context, context.objectDeclarationStatement, out var objectDeclarationContext))
+        {
+            ObjectDeclaration objectDeclaration = null;
+            if (!TryFunc(objectDeclarationContext, "Failed to parse object declaration", () => TryParseObjectDeclaration(objectDeclarationContext, out objectDeclaration)))
+                return false;
+
+            declaration = objectDeclaration;
+        }
         else
         {
             LogError(context, "Expected function, procedure or variable declaration");
@@ -492,6 +500,93 @@ public class KismetScriptASTParser
             }
         }
 
+        return true;
+    }
+
+    private bool TryParseObjectDeclaration(KismetScriptParser.ObjectDeclarationStatementContext context, out ObjectDeclaration objectDeclaration)
+    {
+        LogTrace("Start parsing object declaration");
+        LogContextInfo(context);
+
+        objectDeclaration = CreateAstNode<ObjectDeclaration>(context);
+
+        // Parse attributes if present
+        if (context.attributeList() != null)
+        {
+            if (!TryParseAttributeList(context.attributeList(), out var attributes))
+            {
+                LogError(context.attributeList(), "Failed to parse object attribute list");
+                return false;
+            }
+            objectDeclaration.Attributes.AddRange(attributes);
+        }
+
+        // Parse object name (first identifier)
+        if (context.Identifier()?.Length < 1 || !TryParseIdentifier(context.Identifier(0), out var nameIdentifier))
+        {
+            LogError(context, "Missing object name");
+            return false;
+        }
+        objectDeclaration.Identifier = nameIdentifier;
+
+        // Parse class name (second identifier)
+        if (context.Identifier()?.Length < 2 || !TryParseIdentifier(context.Identifier(1), out var classIdentifier))
+        {
+            LogError(context, "Missing object class name");
+            return false;
+        }
+        objectDeclaration.ClassIdentifier = classIdentifier;
+
+        // Parse property assignments
+        if (context.objectPropertyAssignment()?.Length > 0)
+        {
+            foreach (var propContext in context.objectPropertyAssignment())
+            {
+                if (!TryParseObjectPropertyAssignment(propContext, out var propertyAssignment))
+                {
+                    LogError(propContext, "Failed to parse object property assignment");
+                    return false;
+                }
+                objectDeclaration.Properties.Add(propertyAssignment);
+            }
+        }
+
+        LogTrace("Done parsing object declaration");
+        return true;
+    }
+
+    private bool TryParseObjectPropertyAssignment(KismetScriptParser.ObjectPropertyAssignmentContext context, out ObjectPropertyAssignment propertyAssignment)
+    {
+        LogTrace("Start parsing object property assignment");
+        LogContextInfo(context);
+
+        propertyAssignment = CreateAstNode<ObjectPropertyAssignment>(context);
+
+        // Parse type
+        if (!TryParseTypeIdentifier(context.typeIdentifier(), out var typeIdentifier))
+        {
+            LogError(context.typeIdentifier(), "Failed to parse property type");
+            return false;
+        }
+        propertyAssignment.Type = typeIdentifier;
+
+        // Parse property name
+        if (!TryParseIdentifier(context.Identifier(), out var nameIdentifier))
+        {
+            LogError(context, "Failed to parse property name");
+            return false;
+        }
+        propertyAssignment.Name = nameIdentifier;
+
+        // Parse value expression
+        if (!TryParseExpression(context.expression(), out var valueExpression))
+        {
+            LogError(context.expression(), "Failed to parse property value");
+            return false;
+        }
+        propertyAssignment.Value = valueExpression;
+
+        LogTrace("Done parsing object property assignment");
         return true;
     }
 

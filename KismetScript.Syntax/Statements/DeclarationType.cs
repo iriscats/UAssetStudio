@@ -9,5 +9,6 @@ public enum DeclarationType
     EnumLabel,
     Label,
     Class,
-    Package
+    Package,
+    Object
 }

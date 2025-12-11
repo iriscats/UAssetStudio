@@ -43,6 +43,11 @@ public class CompiledVariableContext : CompiledDeclarationContext<VariableSymbol
     public CompiledVariableContext(VariableSymbol symbol) : base(symbol) { }
 
     public CompiledClassContext Type { get; set; }
+
+    /// <summary>
+    /// The compiled initializer value for this variable (for CDO properties).
+    /// </summary>
+    public CompiledPropertyValue? Initializer { get; set; }
 }
 
 public class CompiledClassContext : CompiledDeclarationContext<ClassSymbol>
@@ -66,4 +71,64 @@ public class CompiledScriptContext
     public List<CompiledVariableContext> Variables { get; init; } = new();
     public List<CompiledFunctionContext> Functions { get; init; } = new();
     public List<CompiledClassContext> Classes { get; init; } = new();
+    public List<CompiledObjectContext> Objects { get; init; } = new();
+}
+
+/// <summary>
+/// Represents a compiled object declaration (sub-object with property values).
+/// </summary>
+public class CompiledObjectContext
+{
+    /// <summary>
+    /// The name of the object instance.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The class/type of this object.
+    /// </summary>
+    public string ClassName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Property assignments within the object.
+    /// </summary>
+    public List<CompiledPropertyAssignment> Properties { get; init; } = new();
+}
+
+/// <summary>
+/// Represents a compiled property assignment with type, name, and value.
+/// </summary>
+public class CompiledPropertyAssignment
+{
+    /// <summary>
+    /// The type of the property (e.g., "float", "Object<ClassName>").
+    /// </summary>
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The name of the property.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The compiled value of the property.
+    /// </summary>
+    public CompiledPropertyValue? Value { get; set; }
+}
+
+/// <summary>
+/// Represents a compiled property value that can hold various types.
+/// </summary>
+public class CompiledPropertyValue
+{
+    public float? FloatValue { get; set; }
+    public double? DoubleValue { get; set; }
+    public int? IntValue { get; set; }
+    public long? Int64Value { get; set; }
+    public bool? BoolValue { get; set; }
+    public byte? ByteValue { get; set; }
+    public string? StringValue { get; set; }
+    public string? ObjectReference { get; set; }
+    public List<CompiledPropertyValue>? ArrayValue { get; set; }
+    public Dictionary<string, CompiledPropertyValue>? StructValue { get; set; }
 }
