@@ -71,9 +71,11 @@ public partial class KismetDecompiler
         }
         else
         {
-            // Workaround for incomplete assets
+            // Asset without ClassExport - could be a data asset or other asset type
             WriteImports();
-            //WriteImportsOld();
+
+            // Write data exports (NormalExports that are not CDOs or sub-objects)
+            WriteDataExports();
 
             // Group functions by their outer class
             var functionsByClass = asset.Exports
@@ -124,6 +126,85 @@ public partial class KismetDecompiler
 
     private void WriteBuiltins()
     {
+    }
+
+    /// <summary>
+    /// Write data exports for assets without ClassExport (data assets).
+    /// These are NormalExports that represent standalone data objects.
+    /// </summary>
+    private void WriteDataExports()
+    {
+        // Find all NormalExports that are:
+        // 1. Top-level (OuterIndex is null or points to package)
+        // 2. Not CDOs (don't start with Default__)
+        // 3. Not FunctionExports
+        var dataExports = _asset.Exports
+            .OfType<NormalExport>()
+            .Where(x => x is not FunctionExport &&
+                        x is not ClassExport &&
+                        !x.ObjectName.ToString().StartsWith("Default__") &&
+                        (x.OuterIndex.IsNull() || !x.OuterIndex.IsExport()))
+            .ToList();
+
+        foreach (var export in dataExports)
+        {
+            WriteDataExport(export);
+        }
+
+        // Also write any sub-objects of these data exports
+        foreach (var export in dataExports)
+        {
+            WriteDataExportSubObjects(export);
+        }
+    }
+
+    /// <summary>
+    /// Write a single data export as an object declaration.
+    /// </summary>
+    private void WriteDataExport(NormalExport export)
+    {
+        var className = GetExportClassName(export);
+        var objectName = FormatIdentifier(export.ObjectName.ToString());
+
+        _writer.WriteLine($"object {objectName} : {FormatIdentifier(className)} {{");
+        _writer.Push();
+
+        if (export.Data != null)
+        {
+            foreach (var propData in export.Data)
+            {
+                var propType = InferPropertyType(propData);
+                var propName = FormatIdentifier(propData.Name.ToString());
+                var propValue = GetDecompiledPropertyValue(propData);
+                _writer.WriteLine($"{propType} {propName} = {propValue};");
+            }
+        }
+
+        _writer.Pop();
+        _writer.WriteLine("}");
+        _writer.WriteLine();
+    }
+
+    /// <summary>
+    /// Write sub-objects of a data export.
+    /// </summary>
+    private void WriteDataExportSubObjects(NormalExport parentExport)
+    {
+        var subObjects = _asset.Exports
+            .OfType<NormalExport>()
+            .Where(x => x is not FunctionExport &&
+                        !x.OuterIndex.IsNull() &&
+                        x.OuterIndex.IsExport() &&
+                        x.OuterIndex.ToExport(_asset) == parentExport &&
+                        !x.ObjectName.ToString().StartsWith("Default__"))
+            .ToList();
+
+        foreach (var subObj in subObjects)
+        {
+            WriteDataExport(subObj);
+            // Recursively write sub-objects of sub-objects
+            WriteDataExportSubObjects(subObj);
+        }
     }
 
     #region CDO and Property Value Support
@@ -217,11 +298,23 @@ public partial class KismetDecompiler
             TextPropertyData => "Text",
             ObjectPropertyData objProp => GetObjectPropertyType(objProp),
             ArrayPropertyData arrayProp => GetArrayPropertyType(arrayProp),
+            MapPropertyData mapProp => GetMapPropertyType(mapProp),
             StructPropertyData structProp => $"Struct<{structProp.StructType}>",
             EnumPropertyData enumProp => $"Enum<{enumProp.EnumType}>",
             SoftObjectPropertyData => "SoftObject",
+            GuidPropertyData => "Guid",
             _ => propData.PropertyType.ToString().Replace("Property", "")
         };
+    }
+
+    /// <summary>
+    /// Get the type string for a MapPropertyData.
+    /// </summary>
+    private string GetMapPropertyType(MapPropertyData mapProp)
+    {
+        // TODO: The grammar doesn't support Map<KeyType, ValueType> syntax with comma
+        // For now, return a generic Object type until grammar supports multi-parameter generics
+        return "Object";
     }
 
     /// <summary>
@@ -309,9 +402,11 @@ public partial class KismetDecompiler
             TextPropertyData textProp => FormatString(textProp.Value?.ToString() ?? ""),
             ObjectPropertyData objProp => GetObjectReference(objProp.Value),
             ArrayPropertyData arrayProp => GetArrayLiteral(arrayProp),
+            MapPropertyData mapProp => GetMapLiteral(mapProp),
             StructPropertyData structProp => GetStructLiteral(structProp),
             EnumPropertyData enumProp => FormatIdentifier(enumProp.Value?.ToString() ?? "None"),
             SoftObjectPropertyData softProp => FormatString(softProp.Value.AssetPath.AssetName?.ToString() ?? ""),
+            GuidPropertyData guidProp => FormatGuid(guidProp.Value),
             _ => $"/* unsupported: {propData.PropertyType} */"
         };
     }
@@ -376,6 +471,32 @@ public partial class KismetDecompiler
         var fields = structProp.Value.Select(p =>
             $"{FormatIdentifier(p.Name.ToString())}: {GetDecompiledPropertyValue(p)}");
         return $"{{ {string.Join(", ", fields)} }}";
+    }
+
+    /// <summary>
+    /// Convert a MapPropertyData to its literal representation.
+    /// </summary>
+    private string GetMapLiteral(MapPropertyData mapProp)
+    {
+        if (mapProp.Value == null || mapProp.Value.Count == 0)
+            return "{}";
+
+        var entries = new List<string>();
+        foreach (var kvp in mapProp.Value)
+        {
+            var key = GetDecompiledPropertyValue(kvp.Key);
+            var value = GetDecompiledPropertyValue(kvp.Value);
+            entries.Add($"{key}: {value}");
+        }
+        return $"{{ {string.Join(", ", entries)} }}";
+    }
+
+    /// <summary>
+    /// Format a Guid value as a string literal.
+    /// </summary>
+    private string FormatGuid(Guid guid)
+    {
+        return $"\"{guid:B}\"";  // Format as {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}
     }
 
     #endregion

@@ -146,6 +146,7 @@ expression
 	: Semicolon																# nullExpression
 	| '(' expression ')'													# compoundExpression
 	| '{' (expression)? (',' expression)* (',')? '}'						# braceInitializerListExpression
+	| '{' (Identifier ':' expression)? (',' Identifier ':' expression)* (',')? '}'	# objectLiteralExpression
 	| '[' (expression)? (',' expression)* (',')? ']'						# bracketInitializerListExpression
 	| New typeIdentifier? arraySignifier? '{' (expression)? (',' expression)* (',')? '}' # newExpression
 	| Identifier '[' expression ']'											# subscriptExpression

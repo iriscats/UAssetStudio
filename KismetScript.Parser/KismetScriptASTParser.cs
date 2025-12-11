@@ -912,6 +912,28 @@ public class KismetScriptASTParser
 
             expression = initializerList;
         }
+        else if (TryCast<KismetScriptParser.ObjectLiteralExpressionContext>(context, out var objectLiteralContext))
+        {
+            var objectLiteral = CreateAstNode<ObjectLiteral>(objectLiteralContext);
+            var identifiers = objectLiteralContext.Identifier();
+            var expressions = objectLiteralContext.expression();
+
+            for (int i = 0; i < identifiers.Length; i++)
+            {
+                if (!TryParseExpression(expressions[i], out var valueExpr))
+                    return false;
+
+                var entry = new ObjectLiteralEntry
+                {
+                    Key = CreateAstNode<Identifier>(identifiers[i]),
+                    Value = valueExpr
+                };
+                entry.Key.Text = identifiers[i].GetText();
+                objectLiteral.Entries.Add(entry);
+            }
+
+            expression = objectLiteral;
+        }
         else if (TryCast<KismetScriptParser.BracketInitializerListExpressionContext>(context, out var bracketInitializerListContext))
         {
             var initializerList = CreateAstNode<InitializerList>(bracketInitializerListContext);

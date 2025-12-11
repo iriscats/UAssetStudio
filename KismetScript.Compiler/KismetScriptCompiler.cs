@@ -559,6 +559,7 @@ public partial class KismetScriptCompiler
             Identifier id => new CompiledPropertyValue { ObjectReference = id.Text },
             NullExpression => new CompiledPropertyValue { ObjectReference = null },
             InitializerList initList => CompileArrayValue(initList),
+            ObjectLiteral objLit => CompileObjectValue(objLit),
             _ => throw new CompilationError(expression, $"Unsupported property value expression type: {expression.GetType().Name}")
         };
     }
@@ -578,6 +579,23 @@ public partial class KismetScriptCompiler
                 arrayValue.Add(compiledElement);
         }
         return new CompiledPropertyValue { ArrayValue = arrayValue };
+    }
+
+    /// <summary>
+    /// Compiles an object literal (key:value pairs) into a struct/map property value.
+    /// </summary>
+    /// <param name="objLit"></param>
+    /// <returns></returns>
+    private CompiledPropertyValue CompileObjectValue(ObjectLiteral objLit)
+    {
+        var structValue = new Dictionary<string, CompiledPropertyValue>();
+        foreach (var entry in objLit.Entries)
+        {
+            var compiledValue = CompilePropertyValue(entry.Value);
+            if (compiledValue != null)
+                structValue[entry.Key.Text] = compiledValue;
+        }
+        return new CompiledPropertyValue { StructValue = structValue };
     }
 
     /// <summary>
