@@ -1,5 +1,7 @@
 using System.CommandLine;
+using KismetScript.Decompiler;
 using KismetScript.Linker;
+using KismetScript.Utilities.Metadata;
 using UAssetAPI.UnrealTypes;
 
 namespace UAssetStudio.Cli.CMD
@@ -10,16 +12,18 @@ namespace UAssetStudio.Cli.CMD
         {
             var assetArg = new Argument<string>("asset", description: "Path to asset (.uasset/.umap)");
             var outdirOpt = new Option<string?>("--outdir", description: "Output directory; default = asset directory");
+            var metaOpt = new Option<bool>("--meta", () => false, "Generate .kms.meta file during verification");
             var verify = new Command("verify", "Decompile asset to .kms, recompile, link, and write .new.uasset")
             {
                 assetArg,
-                outdirOpt
+                outdirOpt,
+                metaOpt
             };
 
             verify.AddOption(ueVersion);
             verify.AddOption(mappings);
 
-            verify.SetHandler((EngineVersion ver, string? mapPath, string assetPath, string? outdir) =>
+            verify.SetHandler((EngineVersion ver, string? mapPath, string assetPath, string? outdir, bool generateMeta) =>
             {
                 if (!File.Exists(assetPath))
                 {
@@ -35,12 +39,36 @@ namespace UAssetStudio.Cli.CMD
                 CliHelpers.DecompileToKms(asset, kmsPath);
                 Console.WriteLine($"Decompiled: {assetPath} -> {kmsPath}");
 
+                // 1.5) Generate metadata if requested
+                KmsMetadata? metadata = null;
+                if (generateMeta)
+                {
+                    var metaPath = kmsPath + ".meta";
+                    var extractor = new MetadataExtractor();
+                    metadata = extractor.Extract(asset);
+                    KmsMetadataSerializer.WriteToFile(metadata, metaPath);
+                    Console.WriteLine($"Generated metadata: {metaPath}");
+                }
+
                 // 2) Compile .kms back
                 var script = CliHelpers.CompileKms(kmsPath, ver);
                 Console.WriteLine($"Compiled script: {script}");
 
                 // 3) Link compiled script into asset
-                var newAsset = new UAssetLinker(asset)
+                UAssetLinker linker;
+                if (generateMeta && metadata != null)
+                {
+                    // Use metadata-based linker for verification (standalone mode)
+                    linker = UAssetLinker.FromMetadata(metadata);
+                    Console.WriteLine("Using metadata for linking");
+                }
+                else
+                {
+                    // Use original asset
+                    linker = new UAssetLinker(asset);
+                }
+
+                var newAsset = linker
                         .LinkCompiledScript(script)
                         .Build();
 
@@ -52,7 +80,7 @@ namespace UAssetStudio.Cli.CMD
                 CliHelpers.VerifyOldAndNew(assetPath, outFile, ver, mapPath);
                 Console.WriteLine($"Verified: {assetPath} -> {kmsPath} -> {outFile}");
 
-            }, ueVersion, mappings, assetArg, outdirOpt);
+            }, ueVersion, mappings, assetArg, outdirOpt, metaOpt);
 
             return verify;
         }

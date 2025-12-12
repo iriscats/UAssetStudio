@@ -1,5 +1,6 @@
 using System.CommandLine;
 using KismetScript.Linker;
+using KismetScript.Utilities.Metadata;
 using UAssetAPI.UnrealTypes;
 
 namespace UAssetStudio.Cli.CMD
@@ -29,16 +30,41 @@ namespace UAssetStudio.Cli.CMD
                     return;
                 }
 
-                var script = CliHelpers.CompileKms(scriptPath, ver);
+                var metaPath = scriptPath + ".meta";
+                var hasMetadata = File.Exists(metaPath);
                 var originalAssetPath = assetPath ?? Path.ChangeExtension(scriptPath, ".uasset");
-                if (!File.Exists(originalAssetPath))
+                var hasOriginalAsset = File.Exists(originalAssetPath);
+
+                var script = CliHelpers.CompileKms(scriptPath, ver);
+
+                UAssetLinker linker;
+
+                if (hasMetadata && !hasOriginalAsset)
+                {
+                    // Standalone compilation mode - use metadata file
+                    Console.WriteLine($"Using metadata file: {metaPath}");
+                    var metadata = KmsMetadataSerializer.ReadFromFile(metaPath);
+                    if (metadata == null)
+                    {
+                        Console.WriteLine($"Error: Failed to parse metadata file {metaPath}");
+                        return;
+                    }
+                    linker = new UAssetLinker(metadata);
+                }
+                else if (hasOriginalAsset)
+                {
+                    // Traditional mode - use original asset
+                    var asset = CliHelpers.LoadAsset(ver, mapPath, originalAssetPath);
+                    linker = new UAssetLinker(asset);
+                }
+                else
                 {
                     Console.WriteLine($"Error: Cannot find original asset file {originalAssetPath} for compilation");
+                    Console.WriteLine($"Hint: Either provide an original .uasset file or generate a .kms.meta file using --meta option during decompilation");
                     return;
                 }
 
-                var asset = CliHelpers.LoadAsset(ver, mapPath, originalAssetPath);
-                var newAsset = new UAssetLinker(asset)
+                var newAsset = linker
                     .LinkCompiledScript(script)
                     .Build();
                 var dir = outdir ?? Path.GetDirectoryName(scriptPath) ?? ".";

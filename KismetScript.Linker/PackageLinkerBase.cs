@@ -67,6 +67,10 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         { "byte", "ByteProperty" },
         { "bool", "BoolProperty" },
         { "int", "IntProperty" },
+        { "int64", "Int64Property" },
+        { "int16", "Int16Property" },
+        { "uint32", "UInt32Property" },
+        { "uint64", "UInt64Property" },
         { "string", "StrProperty" },
         { "float", "FloatProperty" },
         { "double", "DoubleProperty" },
@@ -76,7 +80,16 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         { "Enum", "IntProperty" },
         { "Object", "ObjectProperty" },
         { "Delegate", "DelegateProperty" },
-        { "Class", "ClassProperty" }
+        { "MulticastDelegate", "MulticastDelegateProperty" },
+        { "MulticastInlineDelegate", "MulticastInlineDelegateProperty" },
+        { "MulticastSparseDelegate", "MulticastSparseDelegateProperty" },
+        { "Class", "ClassProperty" },
+        { "SoftObject", "SoftObjectProperty" },
+        { "SoftClass", "SoftClassProperty" },
+        { "Name", "NameProperty" },
+        { "Text", "TextProperty" },
+        { "Map", "MapProperty" },
+        { "Set", "SetProperty" }
     };
 
     protected static string GetPropertySerializedType(VariableSymbol symbol)
@@ -451,6 +464,176 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
                 PropertyClass = FindPackageIndexInAsset(symbol.InnerSymbol!),
             },
+            "MulticastInlineDelegateProperty" or "MulticastDelegateProperty" or "MulticastSparseDelegateProperty" => new FMulticastInlineDelegateProperty()
+            {
+                // FField values
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+
+                // FProperty values
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 16,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+
+                SignatureFunction = symbol.InnerSymbol != null ? FindPackageIndexInAsset(symbol.InnerSymbol) : new FPackageIndex(0),
+            },
+            "SoftClassProperty" => new FSoftClassProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 24,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+                // FSoftClassProperty inherits from FObjectProperty and needs both PropertyClass and MetaClass
+                PropertyClass = symbol.InnerSymbol != null ? FindPackageIndexInAsset(symbol.InnerSymbol) : new FPackageIndex(0),
+                MetaClass = symbol.InnerSymbol != null ? FindPackageIndexInAsset(symbol.InnerSymbol) : new FPackageIndex(0),
+            },
+            "SoftObjectProperty" => new FSoftObjectProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 24,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+                PropertyClass = symbol.InnerSymbol != null ? FindPackageIndexInAsset(symbol.InnerSymbol) : new FPackageIndex(0),
+            },
+            "NameProperty" => new FGenericProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 8,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+            },
+            "TextProperty" => new FGenericProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 24,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+            },
+            "MapProperty" => new FMapProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 80,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+                KeyProp = null!, // Will be set separately if needed
+                ValueProp = null!, // Will be set separately if needed
+            },
+            "SetProperty" => new FSetProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 80,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+                ElementProp = null!, // Will be set separately if needed
+            },
+            "Int64Property" => new FGenericProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 8,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+            },
+            "Int16Property" => new FGenericProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 2,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+            },
+            "UInt32Property" => new FGenericProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 4,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+            },
+            "UInt64Property" => new FGenericProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 8,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+            },
+            "ClassProperty" => new FClassProperty()
+            {
+                SerializedType = AddName(serializedType),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 8,
+                PropertyFlags = propertyFlags,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
+                MetaClass = symbol.InnerSymbol != null ? FindPackageIndexInAsset(symbol.InnerSymbol) : new FPackageIndex(0),
+                PropertyClass = new FPackageIndex(0), // TODO: set properly
+            },
             _ => throw new NotImplementedException(serializedType),
         };
     }
@@ -485,6 +668,25 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
                 RawValue = null,
                 PropertyClass = FindPackageIndexInAsset(classSymbol),
+            };
+        }
+
+        // If inner symbol is null, try to create a generic property based on symbol type name
+        if (innerSymbol == null)
+        {
+            // Default to a generic object property with null class
+            return new FGenericProperty()
+            {
+                SerializedType = AddName("ObjectProperty"),
+                Name = AddName(symbol.Name),
+                Flags = EObjectFlags.RF_Public,
+                ArrayDim = EArrayDim.TArray,
+                ElementSize = 8,
+                PropertyFlags = EPropertyFlags.CPF_None,
+                RepIndex = 0,
+                RepNotifyFunc = AddName("None"),
+                BlueprintReplicationCondition = UAssetAPI.FieldTypes.ELifetimeCondition.COND_None,
+                RawValue = null,
             };
         }
 
@@ -594,7 +796,28 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             }
             else
             {
-                throw new NotImplementedException();
+                // Internal procedure - try to find by local name in exports
+                var candidates = GetPackageIndexByLocalName(procedureSymbol.Name).ToList();
+                if (candidates.Count == 1)
+                {
+                    return candidates[0].PackageIndex;
+                }
+                else if (candidates.Count > 1)
+                {
+                    // Multiple matches - try to find by class.function pattern
+                    var className = procedureSymbol.DeclaringClass?.Name;
+                    if (className != null)
+                    {
+                        var fullName = $"{className}.{procedureSymbol.Name}";
+                        var fullCandidates = GetPackageIndexByFullName(fullName).ToList();
+                        if (fullCandidates.Count == 1)
+                        {
+                            return fullCandidates[0].PackageIndex;
+                        }
+                    }
+                }
+                // Return null index if still not found - let the linker handle it later
+                return new FPackageIndex(0);
             }
         }
         else if (symbol is UnknownSymbol)
@@ -1280,10 +1503,26 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
     protected TExport? FindChildExport<TExport>(StructExport? parent, string name) where TExport : Export
     {
-        var selection = parent?.Children
-            .Where(x => x.IsExport())
-            .Select(x => x.ToExport(Package)) ??
-            Package.Exports;
+        IEnumerable<Export> selection;
+        if (parent != null && parent.Children != null && parent.Children.Length > 0)
+        {
+            // Use Children array when populated
+            selection = parent.Children
+                .Where(x => x.IsExport())
+                .Select(x => x.ToExport(Package));
+        }
+        else if (parent != null)
+        {
+            // Fall back to searching by OuterIndex when Children is empty
+            // This handles metadata-based asset creation where Children isn't populated
+            var parentIndex = FPackageIndex.FromExport(Package.Exports.IndexOf(parent));
+            selection = Package.Exports
+                .Where(x => x.OuterIndex.Index == parentIndex.Index);
+        }
+        else
+        {
+            selection = Package.Exports ?? Enumerable.Empty<Export>();
+        }
         return selection
             .Where(x => x is TExport && x.ObjectName.ToString() == name)
             .Cast<TExport>()

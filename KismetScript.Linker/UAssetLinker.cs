@@ -1,10 +1,13 @@
 using KismetScript.Compiler.Compiler;
 using KismetScript.Compiler.Compiler.Context;
 using KismetScript.Utilities;
+using KismetScript.Utilities.Metadata;
 using System.Text.RegularExpressions;
 using UAssetAPI;
+using UAssetAPI.CustomVersions;
 using UAssetAPI.ExportTypes;
 using UAssetAPI.FieldTypes;
+using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.PropertyTypes.Objects;
 using UAssetAPI.UnrealTypes;
 
@@ -12,6 +15,9 @@ namespace KismetScript.Linker;
 
 public partial class UAssetLinker : PackageLinker<UAsset>
 {
+    private KmsMetadata? _metadata;
+    private static KmsMetadata? _pendingMetadata;
+
     public UAssetLinker()
     {
     }
@@ -20,8 +26,338 @@ public partial class UAssetLinker : PackageLinker<UAsset>
     {
     }
 
+    /// <summary>
+    /// Creates a new UAssetLinker from metadata for standalone compilation.
+    /// </summary>
+    public UAssetLinker(KmsMetadata metadata) : base()
+    {
+        _metadata = metadata;
+    }
+
+    /// <summary>
+    /// Creates a UAssetLinker from metadata (factory method).
+    /// </summary>
+    public static UAssetLinker FromMetadata(KmsMetadata metadata)
+    {
+        _pendingMetadata = metadata;
+        var linker = new UAssetLinker(metadata);
+        _pendingMetadata = null;
+        return linker;
+    }
+
+    /// <summary>
+    /// Creates a UAsset from metadata.
+    /// </summary>
+    private UAsset CreateAssetFromMetadata(KmsMetadata metadata)
+    {
+        var asset = new UAsset()
+        {
+            LegacyFileVersion = metadata.Package.LegacyFileVersion,
+            UsesEventDrivenLoader = metadata.Package.UsesEventDrivenLoader,
+            Imports = new(),
+            DependsMap = new(),
+            SoftPackageReferenceList = new(),
+            AssetRegistryData = new byte[] { 0, 0, 0, 0 },
+            ValorantGarbageData = null,
+            Generations = new(),
+            PackageGuid = metadata.Package.Guid != null ? Guid.Parse(metadata.Package.Guid) : Guid.NewGuid(),
+            RecordedEngineVersion = new()
+            {
+                Major = 0,
+                Minor = 0,
+                Patch = 0,
+                Changelist = 0,
+                Branch = null
+            },
+            RecordedCompatibleWithEngineVersion = new()
+            {
+                Major = 0,
+                Minor = 0,
+                Patch = 0,
+                Changelist = 0,
+                Branch = null
+            },
+            ChunkIDs = Array.Empty<int>(),
+            PackageSource = 4048401688,
+            FolderName = new("None"),
+            IsUnversioned = false, // Use versioned properties for proper serialization
+            FileVersionLicenseeUE = 0,
+            ObjectVersion = ParseObjectVersion(metadata.EngineVersion.ObjectVersion),
+            ObjectVersionUE5 = ParseObjectVersionUE5(metadata.EngineVersion.ObjectVersionUE5),
+            CustomVersionContainer = BuildCustomVersions(metadata.EngineVersion.CustomVersions),
+            Exports = new(),
+            WorldTileInfo = null,
+            PackageFlags = ParsePackageFlags(metadata.Package.Flags),
+            BulkData = Array.Empty<byte>(),
+        };
+
+        // Use reflection to set internal fields
+        var bindingFlags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+
+        // Set AdditionalPackagesToCook
+        var additionalPackagesField = typeof(UAsset).GetField("AdditionalPackagesToCook", bindingFlags);
+        additionalPackagesField?.SetValue(asset, new List<FString>());
+
+        // Set doWeHaveWorldTileInfo to false since WorldTileInfo is null
+        var worldTileInfoField = typeof(UAsset).GetField("doWeHaveWorldTileInfo", bindingFlags);
+        worldTileInfoField?.SetValue(asset, false);
+
+        // Initialize name map from metadata BEFORE creating imports/exports
+        // This is critical - names must exist before they can be referenced
+        if (metadata.NameMap != null && metadata.NameMap.Count > 0)
+        {
+            asset.ClearNameIndexList();
+            foreach (var name in metadata.NameMap)
+            {
+                asset.AddNameReference(new FString(name), forceAddDuplicates: true);
+            }
+        }
+
+        // Build imports from metadata
+        BuildImports(asset, metadata.Imports);
+
+        // Build exports from metadata
+        BuildExports(asset, metadata.Exports);
+
+        // Initialize DependsMap for each export
+        for (int i = 0; i < asset.Exports.Count; i++)
+        {
+            asset.DependsMap.Add(Array.Empty<int>());
+        }
+
+        return asset;
+    }
+
+    private static ObjectVersion ParseObjectVersion(string version)
+    {
+        if (Enum.TryParse<ObjectVersion>(version, out var result))
+            return result;
+        return ObjectVersion.VER_UE4_FIX_WIDE_STRING_CRC;
+    }
+
+    private static ObjectVersionUE5 ParseObjectVersionUE5(string version)
+    {
+        if (Enum.TryParse<ObjectVersionUE5>(version, out var result))
+            return result;
+        return ObjectVersionUE5.UNKNOWN;
+    }
+
+    private static EPackageFlags ParsePackageFlags(List<string> flags)
+    {
+        EPackageFlags result = EPackageFlags.PKG_None;
+        foreach (var flag in flags)
+        {
+            if (Enum.TryParse<EPackageFlags>(flag, out var f))
+                result |= f;
+        }
+        return result;
+    }
+
+    private static List<CustomVersion> BuildCustomVersions(Dictionary<string, int> customVersions)
+    {
+        var result = new List<CustomVersion>();
+        var knownVersions = new Dictionary<string, Guid>
+        {
+            { "FCoreObjectVersion", Guid.Parse("{375EC13C-06E4-48FB-B500-84F0262A717E}") },
+            { "FEditorObjectVersion", Guid.Parse("{E4B068ED-F494-42E9-A231-DA0B2E46BB41}") },
+            { "FFrameworkObjectVersion", Guid.Parse("{CFFC743F-43B0-4480-9391-14DF171D2073}") },
+            { "FSequencerObjectVersion", Guid.Parse("{7B5AE74C-D270-4C10-A958-57980B212A5A}") },
+            { "FAnimPhysObjectVersion", Guid.Parse("{29E575DD-E0A3-4627-9D10-D276232CDCEA}") },
+            { "FFortniteMainBranchObjectVersion", Guid.Parse("{601D1886-AC64-4F84-AA16-D3DE0DEAC7D6}") },
+            { "FReleaseObjectVersion", Guid.Parse("{9C54D522-A826-4FBE-9421-074661B482D0}") },
+        };
+
+        foreach (var cv in customVersions)
+        {
+            if (knownVersions.TryGetValue(cv.Key, out var key))
+            {
+                result.Add(new CustomVersion
+                {
+                    Key = key,
+                    FriendlyName = cv.Key,
+                    Version = cv.Value,
+                    IsSerialized = false
+                });
+            }
+        }
+
+        return result;
+    }
+
+    private static void BuildImports(UAsset asset, List<ImportMetadata> imports)
+    {
+        foreach (var importMeta in imports.OrderBy(x => -x.Index))  // Order by index (most negative first)
+        {
+            var import = new Import
+            {
+                ObjectName = new FName(asset, importMeta.ObjectName),
+                ClassName = new FName(asset, importMeta.ClassName),
+                ClassPackage = new FName(asset, importMeta.ClassPackage),
+                OuterIndex = new FPackageIndex(importMeta.OuterIndex),
+                bImportOptional = importMeta.BImportOptional ?? false
+            };
+            asset.Imports.Add(import);
+        }
+    }
+
+    private static void BuildExports(UAsset asset, List<ExportMetadata> exports)
+    {
+        foreach (var exportMeta in exports.OrderBy(x => x.Index))  // Order by index
+        {
+            Export export = CreateExportFromMetadata(asset, exportMeta);
+            asset.Exports.Add(export);
+        }
+    }
+
+    private static Export CreateExportFromMetadata(UAsset asset, ExportMetadata exportMeta)
+    {
+        Export export;
+
+        // Determine export type based on className and flags
+        if (exportMeta.ClassName.EndsWith("GeneratedClass") ||
+            exportMeta.ClassName == "Class" ||
+            exportMeta.ClassFlags != null)
+        {
+            export = new ClassExport(asset, Array.Empty<byte>())
+            {
+                ClassFlags = ParseClassFlags(exportMeta.ClassFlags),
+                LoadedProperties = Array.Empty<FProperty>(),
+                Data = new List<PropertyData>(),
+                FuncMap = new(),
+                Children = Array.Empty<FPackageIndex>(),
+                Interfaces = Array.Empty<SerializedInterfaceReference>(),
+                ClassConfigName = new FName(asset, "Engine"),
+                ClassWithin = new FPackageIndex(0),
+                ClassGeneratedBy = new FPackageIndex(0),
+                ClassDefaultObject = new FPackageIndex(0),
+                bCooked = true,
+                Field = new UField { Next = new FPackageIndex(0) },
+                SuperStruct = new FPackageIndex(exportMeta.SuperIndex ?? 0),
+                // StructExport fields - required for serialization
+                ScriptBytecode = Array.Empty<KismetExpression>(),
+            };
+        }
+        else if (exportMeta.ClassName == "Function" || exportMeta.FunctionFlags != null)
+        {
+            export = new FunctionExport(asset, Array.Empty<byte>())
+            {
+                FunctionFlags = ParseFunctionFlags(exportMeta.FunctionFlags),
+                ScriptBytecode = Array.Empty<KismetExpression>(),
+                LoadedProperties = Array.Empty<FProperty>(),
+                Data = new List<PropertyData>(),
+                Children = Array.Empty<FPackageIndex>(),
+                Field = new UField { Next = new FPackageIndex(0) },
+                SuperStruct = new FPackageIndex(exportMeta.SuperIndex ?? 0),
+            };
+        }
+        else
+        {
+            export = new NormalExport(asset, Array.Empty<byte>())
+            {
+                Data = new List<PropertyData>()
+            };
+        }
+
+        export.ObjectName = new FName(asset, exportMeta.ObjectName);
+        export.OuterIndex = new FPackageIndex(exportMeta.OuterIndex);
+        export.SuperIndex = new FPackageIndex(exportMeta.SuperIndex ?? 0);
+        export.TemplateIndex = new FPackageIndex(exportMeta.TemplateIndex ?? 0);
+        export.ObjectFlags = ParseObjectFlags(exportMeta.ObjectFlags);
+
+        // Set ClassIndex based on className
+        export.ClassIndex = FindOrCreateClassImport(asset, exportMeta.ClassName);
+
+        return export;
+    }
+
+    private static FPackageIndex FindOrCreateClassImport(UAsset asset, string className)
+    {
+        // First, look for existing import
+        for (int i = 0; i < asset.Imports.Count; i++)
+        {
+            if (asset.Imports[i].ObjectName.ToString() == className)
+            {
+                return FPackageIndex.FromImport(i);
+            }
+        }
+
+        // Also check exports (for self-referencing classes)
+        for (int i = 0; i < asset.Exports.Count; i++)
+        {
+            if (asset.Exports[i].ObjectName.ToString() == className)
+            {
+                return FPackageIndex.FromExport(i);
+            }
+        }
+
+        // Return null index if not found (will be resolved later during linking)
+        return new FPackageIndex(0);
+    }
+
+    private static EObjectFlags ParseObjectFlags(List<string> flags)
+    {
+        EObjectFlags result = EObjectFlags.RF_NoFlags;
+        foreach (var flag in flags)
+        {
+            if (Enum.TryParse<EObjectFlags>(flag, out var f))
+                result |= f;
+        }
+        return result;
+    }
+
+    private static EFunctionFlags ParseFunctionFlags(List<string>? flags)
+    {
+        if (flags == null) return EFunctionFlags.FUNC_None;
+
+        EFunctionFlags result = EFunctionFlags.FUNC_None;
+        foreach (var flag in flags)
+        {
+            if (Enum.TryParse<EFunctionFlags>(flag, out var f))
+                result |= f;
+        }
+        return result;
+    }
+
+    private static EClassFlags ParseClassFlags(List<string>? flags)
+    {
+        if (flags == null) return EClassFlags.CLASS_None;
+
+        EClassFlags result = EClassFlags.CLASS_None;
+        foreach (var flag in flags)
+        {
+            if (Enum.TryParse<EClassFlags>(flag, out var f))
+                result |= f;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Finds a field path from metadata for the given function and property name.
+    /// </summary>
+    protected FieldPathMetadata? FindFieldPathInMetadata(string functionName, string propertyName)
+    {
+        if (_metadata?.FieldPaths == null)
+            return null;
+
+        if (_metadata.FieldPaths.TryGetValue(functionName, out var functionPaths))
+        {
+            if (functionPaths.TryGetValue(propertyName, out var fieldPath))
+            {
+                return fieldPath;
+            }
+        }
+
+        return null;
+    }
+
     protected override UAsset CreateDefaultAsset()
     {
+        // If we have pending metadata, create asset from it
+        if (_pendingMetadata != null)
+        {
+            return CreateAssetFromMetadata(_pendingMetadata);
+        }
+
         var asset = new UAsset()
         {
             LegacyFileVersion = -7,
