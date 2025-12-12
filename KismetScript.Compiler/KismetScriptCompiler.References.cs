@@ -166,6 +166,15 @@ public partial class KismetScriptCompiler
                 {
                     pointer = GetPropertyPointer(callOperator.Arguments[0]);
                 }
+                else if (token == EExprToken.EX_Context)
+                {
+                    // For EX_Context, the second argument contains the property reference
+                    // e.g., EX_Context(objectExpr, EX_InstanceVariable("PropertyName"))
+                    if (callOperator.Arguments.Count >= 2)
+                    {
+                        TryGetPropertyPointer(callOperator.Arguments[1].Expression, out pointer);
+                    }
+                }
             }
         }
         else if (expression is MemberExpression memberAccessExpression)
