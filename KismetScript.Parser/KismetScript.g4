@@ -309,7 +309,7 @@ IdentifierEscape: '`';
 
 // Integer constants
 IntLiteral
-	: ( DecIntLiteral | HexIntLiteral );
+	: ( DecIntLiteral | HexIntLiteral ) IntLiteralSuffix?;
 
 fragment
 DecIntLiteral
@@ -319,6 +319,14 @@ fragment
 HexIntLiteral
 	: Sign? HexLiteralPrefix HexDigit+;
 
+fragment
+IntLiteralSuffix
+	: [uU][lL]    // uL, UL, ul, Ul etc. - UInt64
+	| [lL][uU]    // Lu, LU etc. - UInt64
+	| [uU]        // u, U - UInt32
+	| [lL]        // L, l - Int64
+	;
+
 // Float constant
 FloatLiteral
 	: Sign? Digit* '.'? Digit+ ( FloatLiteralExponent Sign? Digit+ )? FloatLiteralSuffix?
@@ -326,7 +334,7 @@ FloatLiteral
 
 fragment
 FloatLiteralSuffix
-	: ( 'f' | 'F' )
+	: ( 'f' | 'F' | 'd' | 'D' )
 	;
 
 fragment

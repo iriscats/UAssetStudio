@@ -48,6 +48,21 @@ public enum ValueKind
     Int,
 
     /// <summary>
+    /// Int64 primitive value type.
+    /// </summary>
+    Int64,
+
+    /// <summary>
+    /// UInt32 primitive value type.
+    /// </summary>
+    UInt32,
+
+    /// <summary>
+    /// UInt64 primitive value type.
+    /// </summary>
+    UInt64,
+
+    /// <summary>
     /// Float primitive value type.
     /// </summary>
     Float,

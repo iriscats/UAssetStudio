@@ -125,6 +125,8 @@ public class CompiledPropertyValue
     public double? DoubleValue { get; set; }
     public int? IntValue { get; set; }
     public long? Int64Value { get; set; }
+    public uint? UInt32Value { get; set; }
+    public ulong? UInt64Value { get; set; }
     public bool? BoolValue { get; set; }
     public byte? ByteValue { get; set; }
     public string? StringValue { get; set; }

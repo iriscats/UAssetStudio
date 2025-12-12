@@ -1148,9 +1148,17 @@ public class KismetScriptASTParser
 
             if (context.arraySignifier().IntLiteral() != null)
             {
-                if (!TryParseIntLiteral(context.arraySignifier().IntLiteral(), out var arrayLength))
+                if (!TryParseIntLiteral(context.arraySignifier().IntLiteral(), out var arrayLengthExpr))
                     return false;
-                newExpression.ArrayLength = arrayLength;
+                if (arrayLengthExpr is IntLiteral intLit)
+                {
+                    newExpression.ArrayLength = intLit.Value;
+                }
+                else
+                {
+                    LogError(context.arraySignifier(), "Array length must be an integer literal");
+                    return false;
+                }
             }
         }
         if (context.expression() != null)
@@ -1919,13 +1927,33 @@ public class KismetScriptASTParser
         return true;
     }
 
-    private bool TryParseIntLiteral(ITerminalNode node, out IntLiteral literal)
+    private bool TryParseIntLiteral(ITerminalNode node, out Expression literal)
     {
-        literal = CreateAstNode<IntLiteral>(node);
-
-        int value = 0;
-        int sign = 1;
         string intString = node.Symbol.Text;
+
+        // Detect suffix type
+        bool hasU = false, hasL = false;
+        while (intString.Length > 0)
+        {
+            char last = intString[intString.Length - 1];
+            if (last == 'u' || last == 'U')
+            {
+                hasU = true;
+                intString = intString.Substring(0, intString.Length - 1);
+            }
+            else if (last == 'l' || last == 'L')
+            {
+                hasL = true;
+                intString = intString.Substring(0, intString.Length - 1);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Handle sign
+        int sign = 1;
         if (intString.StartsWith("-"))
         {
             sign = -1;
@@ -1933,51 +1961,109 @@ public class KismetScriptASTParser
         }
         else if (intString.StartsWith("+"))
         {
-            sign = 1;
             intString = intString.Substring(1);
         }
 
-        if (intString.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase))
+        // Parse the numeric value
+        bool isHex = intString.StartsWith("0x", StringComparison.InvariantCultureIgnoreCase);
+        if (isHex)
         {
-            // hex number
-            if (!int.TryParse(intString.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value))
-            {
-                LogError(node.Symbol, "Invalid hexidecimal integer value");
-                return false;
-            }
-        }
-        else
-        {
-            // assume decimal
-            if (!int.TryParse(intString, out value))
-            {
-                LogError(node.Symbol, "Invalid decimal integer value");
-                return false;
-            }
+            intString = intString.Substring(2);
         }
 
-        literal.Value = value * sign;
+        NumberStyles style = isHex ? NumberStyles.HexNumber : NumberStyles.Integer;
+
+        if (hasU && hasL) // uL -> UInt64
+        {
+            if (!ulong.TryParse(intString, style, CultureInfo.InvariantCulture, out ulong value))
+            {
+                LogError(node.Symbol, "Invalid UInt64 value");
+                literal = null!;
+                return false;
+            }
+            var result = CreateAstNode<UInt64Literal>(node);
+            result.Value = value;
+            literal = result;
+        }
+        else if (hasL) // L -> Int64
+        {
+            if (!long.TryParse(intString, style, CultureInfo.InvariantCulture, out long value))
+            {
+                LogError(node.Symbol, "Invalid Int64 value");
+                literal = null!;
+                return false;
+            }
+            var result = CreateAstNode<Int64Literal>(node);
+            result.Value = value * sign;
+            literal = result;
+        }
+        else if (hasU) // u -> UInt32
+        {
+            if (!uint.TryParse(intString, style, CultureInfo.InvariantCulture, out uint value))
+            {
+                LogError(node.Symbol, "Invalid UInt32 value");
+                literal = null!;
+                return false;
+            }
+            var result = CreateAstNode<UInt32Literal>(node);
+            result.Value = value;
+            literal = result;
+        }
+        else // Default Int32
+        {
+            if (!int.TryParse(intString, style, CultureInfo.InvariantCulture, out int value))
+            {
+                LogError(node.Symbol, "Invalid integer value");
+                literal = null!;
+                return false;
+            }
+            var result = CreateAstNode<IntLiteral>(node);
+            result.Value = value * sign;
+            literal = result;
+        }
 
         return true;
     }
 
-    private bool TryParseFloatLiteral(ITerminalNode node, out FloatLiteral literal)
+    private bool TryParseFloatLiteral(ITerminalNode node, out Expression literal)
     {
-        literal = CreateAstNode<FloatLiteral>(node);
-
         string floatString = node.Symbol.Text;
-        if (floatString.EndsWith("f", StringComparison.InvariantCultureIgnoreCase))
+        bool isDouble = false;
+
+        if (floatString.EndsWith("d", StringComparison.InvariantCultureIgnoreCase))
+        {
+            isDouble = true;
+            floatString = floatString.Substring(0, floatString.Length - 1);
+        }
+        else if (floatString.EndsWith("f", StringComparison.InvariantCultureIgnoreCase))
         {
             floatString = floatString.Substring(0, floatString.Length - 1);
         }
 
-        if (!float.TryParse(floatString, NumberStyles.Float, CultureInfo.InvariantCulture, out float value))
+        if (isDouble)
         {
-            LogError(node.Symbol, "Invalid float value");
-            return false;
+            if (!double.TryParse(floatString, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                LogError(node.Symbol, "Invalid double value");
+                literal = null!;
+                return false;
+            }
+            var result = CreateAstNode<DoubleLiteral>(node);
+            result.Value = value;
+            literal = result;
         }
-
-        literal.Value = value;
+        else
+        {
+            if (!float.TryParse(floatString, NumberStyles.Float, CultureInfo.InvariantCulture, out float value))
+            {
+                LogError(node.Symbol, "Invalid float value");
+                literal = null!;
+                return false;
+            }
+            var result = CreateAstNode<FloatLiteral>(node);
+            result.Value = value;
+            literal = result;
+        }
 
         return true;
     }

@@ -553,7 +553,11 @@ public partial class KismetScriptCompiler
         return expression switch
         {
             FloatLiteral floatLit => new CompiledPropertyValue { FloatValue = floatLit.Value },
+            DoubleLiteral doubleLit => new CompiledPropertyValue { DoubleValue = doubleLit.Value },
             IntLiteral intLit => new CompiledPropertyValue { IntValue = intLit.Value },
+            Int64Literal int64Lit => new CompiledPropertyValue { Int64Value = int64Lit.Value },
+            UInt32Literal uint32Lit => new CompiledPropertyValue { UInt32Value = uint32Lit.Value },
+            UInt64Literal uint64Lit => new CompiledPropertyValue { UInt64Value = uint64Lit.Value },
             BoolLiteral boolLit => new CompiledPropertyValue { BoolValue = boolLit.Value },
             StringLiteral strLit => new CompiledPropertyValue { StringValue = strLit.Value },
             Identifier id => new CompiledPropertyValue { ObjectReference = id.Text },
@@ -1669,6 +1673,23 @@ public partial class KismetScriptCompiler
                     Value = stringLiteral.Value,
                 });
             }
+        }
+        else if (literal is Int64Literal int64Literal)
+        {
+            return Emit(literal, new EX_Int64Const() { Value = int64Literal.Value });
+        }
+        else if (literal is UInt64Literal uint64Literal)
+        {
+            return Emit(literal, new EX_UInt64Const() { Value = uint64Literal.Value });
+        }
+        else if (literal is UInt32Literal uint32Literal)
+        {
+            // UAssetAPI does not have EX_UInt32Const, use EX_IntConst with unchecked conversion
+            return Emit(literal, new EX_IntConst() { Value = unchecked((int)uint32Literal.Value) });
+        }
+        else if (literal is DoubleLiteral doubleLiteral)
+        {
+            return Emit(literal, new EX_DoubleConst() { Value = doubleLiteral.Value });
         }
         else if (literal is IntLiteral intLiteral)
         {
