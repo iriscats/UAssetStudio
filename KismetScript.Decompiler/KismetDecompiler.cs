@@ -469,7 +469,17 @@ public partial class KismetDecompiler
             return "{}";
 
         var fields = structProp.Value.Select(p =>
-            $"{FormatIdentifier(p.Name.ToString())}: {GetDecompiledPropertyValue(p)}");
+        {
+            var propValue = GetDecompiledPropertyValue(p);
+            // Handle unsupported properties that would create invalid syntax
+            if (propValue.StartsWith("/*") && propValue.EndsWith("*/"))
+            {
+                // Skip the unsupported property entirely or provide a valid default
+                return null;
+            }
+            return $"{FormatIdentifier(p.Name.ToString())}: {propValue}";
+        }).Where(f => f != null);
+
         return $"{{ {string.Join(", ", fields)} }}";
     }
 
@@ -611,6 +621,7 @@ public partial class KismetDecompiler
     {
         var importQueue = new Queue<Symbol>();
         var isInsideClassDecl = false;
+        var isFirstImport = true;
 
         void WriteImport(Symbol symbol)
         {
@@ -627,7 +638,9 @@ public partial class KismetDecompiler
             {
                 if (symbol.Parent?.Class?.Name == "Package")
                 {
-                    _writer.WriteLine();
+                    if (!isFirstImport)
+                        _writer.WriteLine();
+                    isFirstImport = false;
                     _writer.WriteLine($"[Import({FormatString(symbol.Parent.Name)})]");
                 }
                 if (symbol.Children.Count > 0)

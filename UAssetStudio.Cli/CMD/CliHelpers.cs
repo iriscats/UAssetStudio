@@ -103,7 +103,7 @@ namespace UAssetStudio.Cli.CMD
 
         internal static void DecompileToKms(UAsset asset, string outPath)
         {
-            using var outWriter = new StreamWriter(outPath, false, Encoding.Unicode);
+            using var outWriter = new StreamWriter(outPath, false, Encoding.UTF8);
             var decompiler = new KismetDecompiler(outWriter);
             decompiler.Decompile(asset);
         }
@@ -113,7 +113,7 @@ namespace UAssetStudio.Cli.CMD
             try
             {
                 var parser = new KismetScriptASTParser();
-                using var reader = new StreamReader(inPath, Encoding.Unicode);
+                using var reader = new StreamReader(inPath, Encoding.UTF8);
                 var compilationUnit = parser.Parse(reader);
                 var typeResolver = new TypeResolver();
                 typeResolver.ResolveTypes(compilationUnit);
@@ -122,11 +122,25 @@ namespace UAssetStudio.Cli.CMD
             }
             catch (ParseCanceledException ex)
             {
+                Console.WriteLine($"[Error] Parse canceled: {ex.Message}");
+                Console.WriteLine($"[Error] Inner exception: {ex.InnerException?.GetType().Name}: {ex.InnerException?.Message}");
                 if (ex.InnerException is InputMismatchException innerEx)
                 {
-                    var lines = File.ReadAllLines(inPath);
+                    var lines = File.ReadAllLines(inPath, Encoding.UTF8);
+                    Console.WriteLine($"[Error] Offending token: Line {innerEx.OffendingToken.Line}, Column {innerEx.OffendingToken.Column}, Text: '{innerEx.OffendingToken.Text}'");
                     PrintSyntaxError(innerEx.OffendingToken.Line, innerEx.OffendingToken.Column, innerEx.OffendingToken.Column + innerEx.OffendingToken.Text.Length - 1, lines);
                 }
+                else if (ex.InnerException is NoViableAltException noViableEx)
+                {
+                    var lines = File.ReadAllLines(inPath, Encoding.UTF8);
+                    Console.WriteLine($"[Error] No viable alternative at Line {noViableEx.OffendingToken.Line}, Column {noViableEx.OffendingToken.Column}, Text: '{noViableEx.OffendingToken.Text}'");
+                    PrintSyntaxError(noViableEx.OffendingToken.Line, noViableEx.OffendingToken.Column, noViableEx.OffendingToken.Column + noViableEx.OffendingToken.Text.Length - 1, lines);
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Error] Compilation failed: {ex.GetType().Name}: {ex.Message}");
                 throw;
             }
         }

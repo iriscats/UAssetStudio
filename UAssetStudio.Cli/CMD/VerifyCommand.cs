@@ -33,9 +33,11 @@ namespace UAssetStudio.Cli.CMD
                 // 1) Decompile to .kms
                 var kmsPath = Path.Join(dir, Path.ChangeExtension(Path.GetFileName(assetPath), ".kms"));
                 CliHelpers.DecompileToKms(asset, kmsPath);
+                Console.WriteLine($"Decompiled: {assetPath} -> {kmsPath}");
 
                 // 2) Compile .kms back
                 var script = CliHelpers.CompileKms(kmsPath, ver);
+                Console.WriteLine($"Compiled script: {script}");
 
                 // 3) Link compiled script into asset
                 var newAsset = new UAssetLinker(asset)
