@@ -80,7 +80,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             ChunkIDs = Array.Empty<int>(),
             PackageSource = 4048401688,
             FolderName = new("None"),
-            IsUnversioned = false, // Use versioned properties for proper serialization
+            IsUnversioned = metadata.Package.IsUnversioned,
             FileVersionLicenseeUE = 0,
             ObjectVersion = ParseObjectVersion(metadata.EngineVersion.ObjectVersion),
             ObjectVersionUE5 = ParseObjectVersionUE5(metadata.EngineVersion.ObjectVersionUE5),
@@ -190,9 +190,9 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         {
             var import = new Import
             {
-                ObjectName = new FName(asset, importMeta.ObjectName),
-                ClassName = new FName(asset, importMeta.ClassName),
-                ClassPackage = new FName(asset, importMeta.ClassPackage),
+                ObjectName = GetExistingFName(asset, importMeta.ObjectName),
+                ClassName = GetExistingFName(asset, importMeta.ClassName),
+                ClassPackage = GetExistingFName(asset, importMeta.ClassPackage),
                 OuterIndex = new FPackageIndex(importMeta.OuterIndex),
                 bImportOptional = importMeta.BImportOptional ?? false
             };
@@ -218,15 +218,15 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             exportMeta.ClassName == "Class" ||
             exportMeta.ClassFlags != null)
         {
-            export = new ClassExport(asset, Array.Empty<byte>())
+            var classExport = new ClassExport(asset, Array.Empty<byte>())
             {
                 ClassFlags = ParseClassFlags(exportMeta.ClassFlags),
-                LoadedProperties = Array.Empty<FProperty>(),
+                LoadedProperties = RestoreLoadedProperties(asset, exportMeta.LoadedProperties),
                 Data = new List<PropertyData>(),
                 FuncMap = new(),
                 Children = Array.Empty<FPackageIndex>(),
                 Interfaces = Array.Empty<SerializedInterfaceReference>(),
-                ClassConfigName = new FName(asset, "Engine"),
+                ClassConfigName = GetExistingFName(asset, "Engine"),
                 ClassWithin = new FPackageIndex(0),
                 ClassGeneratedBy = new FPackageIndex(0),
                 ClassDefaultObject = new FPackageIndex(0),
@@ -236,19 +236,21 @@ public partial class UAssetLinker : PackageLinker<UAsset>
                 // StructExport fields - required for serialization
                 ScriptBytecode = Array.Empty<KismetExpression>(),
             };
+            export = classExport;
         }
         else if (exportMeta.ClassName == "Function" || exportMeta.FunctionFlags != null)
         {
-            export = new FunctionExport(asset, Array.Empty<byte>())
+            var funcExport = new FunctionExport(asset, Array.Empty<byte>())
             {
                 FunctionFlags = ParseFunctionFlags(exportMeta.FunctionFlags),
                 ScriptBytecode = Array.Empty<KismetExpression>(),
-                LoadedProperties = Array.Empty<FProperty>(),
+                LoadedProperties = RestoreLoadedProperties(asset, exportMeta.LoadedProperties),
                 Data = new List<PropertyData>(),
                 Children = Array.Empty<FPackageIndex>(),
                 Field = new UField { Next = new FPackageIndex(0) },
                 SuperStruct = new FPackageIndex(exportMeta.SuperIndex ?? 0),
             };
+            export = funcExport;
         }
         else
         {
@@ -258,7 +260,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             };
         }
 
-        export.ObjectName = new FName(asset, exportMeta.ObjectName);
+        export.ObjectName = GetExistingFName(asset, exportMeta.ObjectName);
         export.OuterIndex = new FPackageIndex(exportMeta.OuterIndex);
         export.SuperIndex = new FPackageIndex(exportMeta.SuperIndex ?? 0);
         export.TemplateIndex = new FPackageIndex(exportMeta.TemplateIndex ?? 0);
@@ -266,6 +268,37 @@ public partial class UAssetLinker : PackageLinker<UAsset>
 
         // Set ClassIndex based on className
         export.ClassIndex = FindOrCreateClassImport(asset, exportMeta.ClassName);
+
+        // Restore Extras data
+        if (!string.IsNullOrEmpty(exportMeta.Extras))
+        {
+            export.Extras = Convert.FromBase64String(exportMeta.Extras);
+        }
+
+        // Restore dependencies
+        if (exportMeta.Dependencies != null)
+        {
+            if (exportMeta.Dependencies.SerializationBeforeSerialization != null)
+            {
+                export.SerializationBeforeSerializationDependencies = exportMeta.Dependencies.SerializationBeforeSerialization
+                    .Select(i => new FPackageIndex(i)).ToList();
+            }
+            if (exportMeta.Dependencies.CreateBeforeSerialization != null)
+            {
+                export.CreateBeforeSerializationDependencies = exportMeta.Dependencies.CreateBeforeSerialization
+                    .Select(i => new FPackageIndex(i)).ToList();
+            }
+            if (exportMeta.Dependencies.SerializationBeforeCreate != null)
+            {
+                export.SerializationBeforeCreateDependencies = exportMeta.Dependencies.SerializationBeforeCreate
+                    .Select(i => new FPackageIndex(i)).ToList();
+            }
+            if (exportMeta.Dependencies.CreateBeforeCreate != null)
+            {
+                export.CreateBeforeCreateDependencies = exportMeta.Dependencies.CreateBeforeCreate
+                    .Select(i => new FPackageIndex(i)).ToList();
+            }
+        }
 
         return export;
     }
@@ -326,6 +359,124 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         foreach (var flag in flags)
         {
             if (Enum.TryParse<EClassFlags>(flag, out var f))
+                result |= f;
+        }
+        return result;
+    }
+
+    private static FProperty[] RestoreLoadedProperties(UAsset asset, List<FPropertyMetadata>? properties)
+    {
+        if (properties == null || properties.Count == 0)
+            return Array.Empty<FProperty>();
+
+        return properties.Select(p => RestoreFProperty(asset, p)).ToArray();
+    }
+
+    private static FProperty RestoreFProperty(UAsset asset, FPropertyMetadata meta)
+    {
+        FProperty prop = meta.SerializedType switch
+        {
+            "ClassProperty" => new FClassProperty
+            {
+                PropertyClass = new FPackageIndex(meta.PropertyClass ?? 0),
+                MetaClass = new FPackageIndex(meta.MetaClass ?? 0)
+            },
+            "SoftClassProperty" => new FSoftClassProperty
+            {
+                PropertyClass = new FPackageIndex(meta.PropertyClass ?? 0),
+                MetaClass = new FPackageIndex(meta.MetaClass ?? 0)
+            },
+            "ObjectProperty" => new FObjectProperty
+            {
+                PropertyClass = new FPackageIndex(meta.PropertyClass ?? 0)
+            },
+            "WeakObjectProperty" => new FWeakObjectProperty
+            {
+                PropertyClass = new FPackageIndex(meta.PropertyClass ?? 0)
+            },
+            "SoftObjectProperty" => new FSoftObjectProperty
+            {
+                PropertyClass = new FPackageIndex(meta.PropertyClass ?? 0)
+            },
+            "DelegateProperty" => new FDelegateProperty
+            {
+                SignatureFunction = new FPackageIndex(meta.SignatureFunction ?? 0)
+            },
+            "MulticastDelegateProperty" => new FMulticastDelegateProperty
+            {
+                SignatureFunction = new FPackageIndex(meta.SignatureFunction ?? 0)
+            },
+            "MulticastInlineDelegateProperty" => new FMulticastInlineDelegateProperty
+            {
+                SignatureFunction = new FPackageIndex(meta.SignatureFunction ?? 0)
+            },
+            "InterfaceProperty" => new FInterfaceProperty
+            {
+                InterfaceClass = new FPackageIndex(meta.InterfaceClass ?? 0)
+            },
+            "StructProperty" => new FStructProperty
+            {
+                Struct = new FPackageIndex(meta.Struct ?? 0)
+            },
+            "EnumProperty" => new FEnumProperty
+            {
+                Enum = new FPackageIndex(meta.Enum ?? 0),
+                UnderlyingProp = meta.UnderlyingProp != null ? RestoreFProperty(asset, meta.UnderlyingProp) : null!
+            },
+            "ByteProperty" => new FByteProperty
+            {
+                Enum = new FPackageIndex(meta.Enum ?? 0)
+            },
+            "BoolProperty" => new FBoolProperty
+            {
+                FieldSize = (byte)(meta.FieldSize ?? 0),
+                ByteOffset = (byte)(meta.ByteOffset ?? 0),
+                ByteMask = (byte)(meta.ByteMask ?? 0),
+                FieldMask = (byte)(meta.FieldMask ?? 0),
+                NativeBool = meta.NativeBool ?? false,
+                Value = meta.BoolValue ?? false
+            },
+            "ArrayProperty" => new FArrayProperty
+            {
+                Inner = meta.Inner != null ? RestoreFProperty(asset, meta.Inner) : null!
+            },
+            "SetProperty" => new FSetProperty
+            {
+                ElementProp = meta.ElementProp != null ? RestoreFProperty(asset, meta.ElementProp) : null!
+            },
+            "MapProperty" => new FMapProperty
+            {
+                KeyProp = meta.KeyProp != null ? RestoreFProperty(asset, meta.KeyProp) : null!,
+                ValueProp = meta.ValueProp != null ? RestoreFProperty(asset, meta.ValueProp) : null!
+            },
+            _ => new FGenericProperty()
+        };
+
+        // Set base FField properties - use GetExistingFName to avoid adding to NameMap
+        prop.SerializedType = GetExistingFName(asset, meta.SerializedType);
+        prop.Name = GetExistingFName(asset, meta.Name);
+        prop.Flags = ParseObjectFlags(meta.Flags ?? new List<string>());
+
+        // Set base FProperty properties
+        prop.ArrayDim = Enum.TryParse<EArrayDim>(meta.ArrayDim, out var arrDim) ? arrDim : EArrayDim.TArray;
+        prop.ElementSize = meta.ElementSize;
+        prop.PropertyFlags = ParsePropertyFlags(meta.PropertyFlags);
+        prop.RepIndex = (ushort)meta.RepIndex;
+        prop.RepNotifyFunc = GetExistingFName(asset, meta.RepNotifyFunc ?? "None");
+        prop.BlueprintReplicationCondition = Enum.TryParse<ELifetimeCondition>(meta.BlueprintReplicationCondition, out var replCond)
+            ? replCond : ELifetimeCondition.COND_None;
+
+        return prop;
+    }
+
+    private static EPropertyFlags ParsePropertyFlags(List<string>? flags)
+    {
+        if (flags == null) return EPropertyFlags.CPF_None;
+
+        EPropertyFlags result = EPropertyFlags.CPF_None;
+        foreach (var flag in flags)
+        {
+            if (Enum.TryParse<EPropertyFlags>(flag, out var f))
                 result |= f;
         }
         return result;
@@ -789,6 +940,23 @@ public partial class UAssetLinker : PackageLinker<UAsset>
     public override UAsset Build()
     {
         return Package;
+    }
+
+    /// <summary>
+    /// Creates an FName that looks up the existing name in NameMap without adding a new entry.
+    /// Used in metadata mode where NameMap is pre-populated.
+    /// Falls back to standard FName creation if name is not found (for safety).
+    /// </summary>
+    private static FName GetExistingFName(UAsset asset, string name)
+    {
+        var fstring = new FString(name);
+        if (asset.ContainsNameReference(fstring))
+        {
+            var index = asset.SearchNameReference(fstring);
+            return new FName(asset, index, 0);
+        }
+        // Fallback - name doesn't exist, use normal creation
+        return new FName(asset, name);
     }
 
     /// <summary>

@@ -52,13 +52,23 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         if (idSuffixMatch?.Success ?? false)
         {
             var nameWithoutSuffix = name[..^idSuffixMatch.Length];
-            if (Package.ContainsNameReference(new(nameWithoutSuffix)) &&
-                int.TryParse(idSuffixMatch.Groups[1].Value, out var id))
+            var baseFString = new FString(nameWithoutSuffix);
+            var containsBase = Package.ContainsNameReference(baseFString);
+            if (containsBase && int.TryParse(idSuffixMatch.Groups[1].Value, out var id))
             {
+                Console.WriteLine($"[AddName] '{name}' -> reusing base '{nameWithoutSuffix}' with Number={id + 1}");
                 return new FName(Package, nameWithoutSuffix, id + 1);
             }
+            // Debug: Log when we don't find the base name
+            Console.WriteLine($"[AddName] '{name}' -> base '{nameWithoutSuffix}' not found (contains: {containsBase})");
         }
 
+        // Debug: check if name already exists before adding
+        var fstring = new FString(name);
+        if (!Package.ContainsNameReference(fstring))
+        {
+            Console.WriteLine($"[AddName] Adding new name to NameMap: '{name}'");
+        }
         return new FName(Package, name);
     }
 
@@ -844,6 +854,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 // Reuse preserved path metadata when available to match the original asset exactly.
                 if (_originalPropertyFieldPaths.TryGetValue((kind, propertyName), out var preservedFieldPath))
                 {
+                    Console.WriteLine($"[FixPropertyPointer] '{propertyName}' using preserved path");
                     pointer = new KismetPropertyPointer()
                     {
                         Old = new FPackageIndex(0),
@@ -851,6 +862,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     };
                     return;
                 }
+                Console.WriteLine($"[FixPropertyPointer] '{propertyName}' NOT using preserved path, will call AddName");
 
                 FPackageIndex resolvedOwner;
                 if (iProperty.Symbol is UnknownSymbol)
@@ -1148,6 +1160,8 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     protected KismetExpression[] GetFixedBytecode(IEnumerable<KismetExpression> expressions)
     {
         var bytecode = expressions.ToArray();
+        int intermediateCount = 0;
+        int totalCount = 0;
         foreach (var baseExpr in bytecode.Flatten())
         {
             switch (baseExpr)
@@ -1272,7 +1286,13 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 default:
                     break;
             }
+            totalCount++;
+            if (baseExpr is EX_LocalVariable lv && lv.Variable is IntermediatePropertyPointer)
+                intermediateCount++;
+            else if (baseExpr is EX_InstanceVariable iv && iv.Variable is IntermediatePropertyPointer)
+                intermediateCount++;
         }
+        Console.WriteLine($"[GetFixedBytecode] total={totalCount}, intermediate={intermediateCount}");
         return bytecode;
     }
 
@@ -1721,6 +1741,6 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         return Package;
     }
 
-    [GeneratedRegex("_(\\d+)")]
+    [GeneratedRegex("_(\\d+)$")]
     private static partial Regex NameIdSuffix();
 }

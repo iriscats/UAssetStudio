@@ -28,6 +28,7 @@ public class PackageMetadata
     public List<string> Flags { get; set; } = new();
     public int LegacyFileVersion { get; set; } = -7;
     public bool UsesEventDrivenLoader { get; set; } = true;
+    public bool IsUnversioned { get; set; } = true;
 }
 
 /// <summary>
@@ -69,6 +70,53 @@ public class ExportMetadata
     public List<string>? ClassFlags { get; set; }
     public bool? IsCDO { get; set; }
     public ExportDependencies? Dependencies { get; set; }
+    /// <summary>
+    /// Base64 encoded extra binary data for the export.
+    /// </summary>
+    public string? Extras { get; set; }
+    /// <summary>
+    /// Loaded properties for FunctionExport/StructExport.
+    /// </summary>
+    public List<FPropertyMetadata>? LoadedProperties { get; set; }
+}
+
+/// <summary>
+/// FProperty metadata for function/struct local variables.
+/// </summary>
+public class FPropertyMetadata
+{
+    public string SerializedType { get; set; } = "";
+    public string Name { get; set; } = "";
+    public List<string>? Flags { get; set; }
+    public string? ArrayDim { get; set; }
+    public int ElementSize { get; set; }
+    public List<string>? PropertyFlags { get; set; }
+    public int RepIndex { get; set; }
+    public string? RepNotifyFunc { get; set; }
+    public string? BlueprintReplicationCondition { get; set; }
+
+    // Type-specific fields
+    public int? PropertyClass { get; set; }  // FObjectProperty
+    public int? MetaClass { get; set; }      // FClassProperty
+    public int? SignatureFunction { get; set; }  // FDelegateProperty
+    public int? InterfaceClass { get; set; }     // FInterfaceProperty
+    public int? Struct { get; set; }         // FStructProperty
+    public int? Enum { get; set; }           // FByteProperty, FEnumProperty
+
+    // FBoolProperty
+    public int? FieldSize { get; set; }
+    public int? ByteOffset { get; set; }
+    public int? ByteMask { get; set; }
+    public int? FieldMask { get; set; }
+    public bool? NativeBool { get; set; }
+    public bool? BoolValue { get; set; }
+
+    // Nested properties
+    public FPropertyMetadata? Inner { get; set; }          // FArrayProperty
+    public FPropertyMetadata? ElementProp { get; set; }    // FSetProperty
+    public FPropertyMetadata? KeyProp { get; set; }        // FMapProperty
+    public FPropertyMetadata? ValueProp { get; set; }      // FMapProperty
+    public FPropertyMetadata? UnderlyingProp { get; set; } // FEnumProperty
 }
 
 /// <summary>

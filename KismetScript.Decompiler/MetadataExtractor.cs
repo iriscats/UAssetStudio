@@ -2,6 +2,7 @@ using KismetScript.Utilities;
 using KismetScript.Utilities.Metadata;
 using UAssetAPI;
 using UAssetAPI.ExportTypes;
+using UAssetAPI.FieldTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.Kismet.Bytecode.Expressions;
 using UAssetAPI.UnrealTypes;
@@ -45,7 +46,8 @@ public class MetadataExtractor
             Guid = _asset.PackageGuid.ToString(),
             Flags = GetPackageFlags(),
             LegacyFileVersion = _asset.LegacyFileVersion,
-            UsesEventDrivenLoader = _asset.UsesEventDrivenLoader
+            UsesEventDrivenLoader = _asset.UsesEventDrivenLoader,
+            IsUnversioned = _asset.IsUnversioned
         };
     }
 
@@ -140,20 +142,34 @@ public class MetadataExtractor
                 IsCDO = export.ObjectFlags.HasFlag(EObjectFlags.RF_ClassDefaultObject) ? true : null
             };
 
-            // Add function-specific flags
+            // Add function-specific flags and LoadedProperties
             if (export is FunctionExport funcExport)
             {
                 exportMeta.FunctionFlags = GetFunctionFlags(funcExport.FunctionFlags);
+                exportMeta.LoadedProperties = ExtractLoadedProperties(funcExport.LoadedProperties);
             }
 
-            // Add class-specific flags
+            // Add class-specific flags and LoadedProperties
             if (export is ClassExport classExport)
             {
                 exportMeta.ClassFlags = GetClassFlags(classExport.ClassFlags);
+                exportMeta.LoadedProperties = ExtractLoadedProperties(classExport.LoadedProperties);
+            }
+
+            // For StructExport, extract LoadedProperties
+            if (export is StructExport structExport && export is not FunctionExport && export is not ClassExport)
+            {
+                exportMeta.LoadedProperties = ExtractLoadedProperties(structExport.LoadedProperties);
             }
 
             // Add dependencies if available
             exportMeta.Dependencies = ExtractExportDependencies(export);
+
+            // Add Extras data (base64 encoded)
+            if (export.Extras != null && export.Extras.Length > 0)
+            {
+                exportMeta.Extras = Convert.ToBase64String(export.Extras);
+            }
 
             exports.Add(exportMeta);
         }
@@ -221,25 +237,143 @@ public class MetadataExtractor
 
     private ExportDependencies? ExtractExportDependencies(Export export)
     {
-        // Check if the asset has dependency maps
-        if (_asset.DependsMap == null || _asset.DependsMap.Count == 0)
-            return null;
+        // Extract dependencies directly from the export object
+        var hasDeps = export.SerializationBeforeSerializationDependencies.Count > 0 ||
+                      export.CreateBeforeSerializationDependencies.Count > 0 ||
+                      export.SerializationBeforeCreateDependencies.Count > 0 ||
+                      export.CreateBeforeCreateDependencies.Count > 0;
 
-        var exportIndex = _asset.Exports.IndexOf(export);
-        if (exportIndex < 0 || exportIndex >= _asset.DependsMap.Count)
+        if (!hasDeps)
             return null;
-
-        var deps = _asset.DependsMap[exportIndex];
-        if (deps == null || deps.Length == 0)
-            return null;
-
-        // The DependsMap contains int values (FPackageIndex indices)
-        var depsList = deps.ToList();
 
         return new ExportDependencies
         {
-            SerializationBeforeSerialization = depsList.Count > 0 ? depsList : null
+            SerializationBeforeSerialization = export.SerializationBeforeSerializationDependencies.Count > 0
+                ? export.SerializationBeforeSerializationDependencies.Select(x => x.Index).ToList()
+                : null,
+            CreateBeforeSerialization = export.CreateBeforeSerializationDependencies.Count > 0
+                ? export.CreateBeforeSerializationDependencies.Select(x => x.Index).ToList()
+                : null,
+            SerializationBeforeCreate = export.SerializationBeforeCreateDependencies.Count > 0
+                ? export.SerializationBeforeCreateDependencies.Select(x => x.Index).ToList()
+                : null,
+            CreateBeforeCreate = export.CreateBeforeCreateDependencies.Count > 0
+                ? export.CreateBeforeCreateDependencies.Select(x => x.Index).ToList()
+                : null
         };
+    }
+
+    private List<FPropertyMetadata>? ExtractLoadedProperties(FProperty[]? properties)
+    {
+        if (properties == null || properties.Length == 0)
+            return null;
+
+        return properties.Select(ExtractFProperty).ToList();
+    }
+
+    private FPropertyMetadata ExtractFProperty(FProperty prop)
+    {
+        var meta = new FPropertyMetadata
+        {
+            SerializedType = prop.SerializedType?.ToString() ?? prop.GetType().Name.Replace("F", "").Replace("Property", "Property"),
+            Name = prop.Name?.ToString() ?? "",
+            Flags = GetObjectFlagsAsStrings(prop.Flags),
+            ArrayDim = prop.ArrayDim.ToString(),
+            ElementSize = prop.ElementSize,
+            PropertyFlags = GetPropertyFlagsAsStrings(prop.PropertyFlags),
+            RepIndex = prop.RepIndex,
+            RepNotifyFunc = prop.RepNotifyFunc?.ToString(),
+            BlueprintReplicationCondition = prop.BlueprintReplicationCondition.ToString()
+        };
+
+        // Type-specific properties
+        switch (prop)
+        {
+            case FClassProperty classProperty:
+                meta.PropertyClass = classProperty.PropertyClass.Index;
+                meta.MetaClass = classProperty.MetaClass.Index;
+                break;
+            case FSoftClassProperty softClassProperty:
+                meta.PropertyClass = softClassProperty.PropertyClass.Index;
+                meta.MetaClass = softClassProperty.MetaClass.Index;
+                break;
+            case FObjectProperty objectProperty:
+                meta.PropertyClass = objectProperty.PropertyClass.Index;
+                break;
+            case FDelegateProperty delegateProperty:
+                meta.SignatureFunction = delegateProperty.SignatureFunction.Index;
+                break;
+            case FInterfaceProperty interfaceProperty:
+                meta.InterfaceClass = interfaceProperty.InterfaceClass.Index;
+                break;
+            case FStructProperty structProperty:
+                meta.Struct = structProperty.Struct.Index;
+                break;
+            case FEnumProperty enumProperty:
+                meta.Enum = enumProperty.Enum.Index;
+                if (enumProperty.UnderlyingProp != null)
+                    meta.UnderlyingProp = ExtractFProperty(enumProperty.UnderlyingProp);
+                break;
+            case FByteProperty byteProperty:
+                meta.Enum = byteProperty.Enum.Index;
+                break;
+            case FBoolProperty boolProperty:
+                meta.FieldSize = boolProperty.FieldSize;
+                meta.ByteOffset = boolProperty.ByteOffset;
+                meta.ByteMask = boolProperty.ByteMask;
+                meta.FieldMask = boolProperty.FieldMask;
+                meta.NativeBool = boolProperty.NativeBool;
+                meta.BoolValue = boolProperty.Value;
+                break;
+            case FArrayProperty arrayProperty:
+                if (arrayProperty.Inner != null)
+                    meta.Inner = ExtractFProperty(arrayProperty.Inner);
+                break;
+            case FSetProperty setProperty:
+                if (setProperty.ElementProp != null)
+                    meta.ElementProp = ExtractFProperty(setProperty.ElementProp);
+                break;
+            case FMapProperty mapProperty:
+                if (mapProperty.KeyProp != null)
+                    meta.KeyProp = ExtractFProperty(mapProperty.KeyProp);
+                if (mapProperty.ValueProp != null)
+                    meta.ValueProp = ExtractFProperty(mapProperty.ValueProp);
+                break;
+        }
+
+        return meta;
+    }
+
+    private List<string>? GetObjectFlagsAsStrings(EObjectFlags flags)
+    {
+        if (flags == EObjectFlags.RF_NoFlags)
+            return null;
+
+        var result = new List<string>();
+        foreach (EObjectFlags flag in Enum.GetValues(typeof(EObjectFlags)))
+        {
+            if (flag != EObjectFlags.RF_NoFlags && (flags & flag) != 0)
+            {
+                result.Add(flag.ToString());
+            }
+        }
+        return result.Count > 0 ? result : null;
+    }
+
+    private List<string>? GetPropertyFlagsAsStrings(EPropertyFlags flags)
+    {
+        if (flags == EPropertyFlags.CPF_None)
+            return null;
+
+        var result = new List<string>();
+        foreach (EPropertyFlags flag in Enum.GetValues(typeof(EPropertyFlags)))
+        {
+            if (flag != EPropertyFlags.CPF_None && ((ulong)flags & (ulong)flag) != 0)
+            {
+                result.Add(flag.ToString());
+            }
+        }
+        return result.Count > 0 ? result : null;
     }
 
     private Dictionary<string, Dictionary<string, FieldPathMetadata>> ExtractFieldPaths()
