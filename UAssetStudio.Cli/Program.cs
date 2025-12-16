@@ -24,6 +24,9 @@ internal static class Program
         var compile = CompileCommandBuilder.Create(ueVersion, mappings);
         root.Add(compile);
 
+        var json = JsonCommandBuilder.Create(ueVersion, mappings);
+        root.Add(json);
+
         var verify = VerifyCommandBuilder.Create(ueVersion, mappings);
         root.Add(verify);
 

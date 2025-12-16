@@ -653,6 +653,12 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             LinkClassCDO(classExport, classContext, scriptContext.Objects);
         }
 
+        // Link top-level objects (non-CDO objects)
+        foreach (var objectContext in scriptContext.Objects)
+        {
+            LinkTopLevelObject(objectContext);
+        }
+
         return this;
     }
 
@@ -669,13 +675,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         if (cdoExport == null)
             return; // CDO doesn't exist, nothing to update
 
-        // If CDO already has data (from the original asset), preserve it.
-        // The data is already correct - we don't need to recreate PropertyData objects.
-        // Creating new PropertyData would add unwanted entries to NameMap.
-        if (cdoExport.Data != null && cdoExport.Data.Count > 0)
-            return;
-
-        // Initialize Data for new CDOs
+        // Initialize Data for new CDOs (or reuse existing list)
         cdoExport.Data ??= new List<PropertyData>();
 
         // First, link sub-objects referenced by this CDO
@@ -721,12 +721,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         if (subObjectExport == null)
             return; // Sub-object doesn't exist, nothing to update
 
-        // If sub-object already has data (from the original asset), preserve it.
-        // The data is already correct - we don't need to recreate PropertyData objects.
-        if (subObjectExport.Data != null && subObjectExport.Data.Count > 0)
-            return;
-
-        // Initialize Data for new sub-objects
+        // Initialize Data for new sub-objects (or reuse existing list)
         subObjectExport.Data ??= new List<PropertyData>();
 
         // Populate Data from compiled properties
@@ -741,6 +736,38 @@ public partial class UAssetLinker : PackageLinker<UAsset>
                     subObjectExport.Data[existingPropIndex] = propData;
                 else
                     subObjectExport.Data.Add(propData);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Links a top-level object export, populating its Data with property values.
+    /// </summary>
+    private void LinkTopLevelObject(CompiledObjectContext objectContext)
+    {
+        // Find existing top-level object export
+        var objectExport = Package.Exports
+            .OfType<NormalExport>()
+            .FirstOrDefault(x => x.ObjectName.ToString() == objectContext.Name);
+
+        if (objectExport == null)
+            return; // Object doesn't exist, nothing to update
+
+        // Initialize Data (or reuse existing list)
+        objectExport.Data ??= new List<PropertyData>();
+
+        // Populate Data from compiled properties
+        foreach (var prop in objectContext.Properties)
+        {
+            var existingPropIndex = objectExport.Data.FindIndex(p => p.Name.ToString() == prop.Name);
+            var propData = CreatePropertyDataFromValue(prop.Name, prop.Type, prop.Value);
+
+            if (propData != null)
+            {
+                if (existingPropIndex >= 0)
+                    objectExport.Data[existingPropIndex] = propData;
+                else
+                    objectExport.Data.Add(propData);
             }
         }
     }
@@ -769,22 +796,54 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         }
         if (value.StringValue != null)
         {
+            // Check if this is a Text type based on typeHint
+            if (typeHint == "Text")
+            {
+                return new TextPropertyData(fname) { Value = new FString(value.StringValue) };
+            }
+            // Check if this is a SoftObject path string
+            if (typeHint == "SoftObject")
+            {
+                var assetPath = new FName(Package, value.StringValue);
+                var softPath = new FSoftObjectPath(null, assetPath, new FString(""));
+                return new SoftObjectPropertyData(fname) { Value = softPath };
+            }
             return new StrPropertyData(fname) { Value = new FString(value.StringValue) };
         }
         if (value.ObjectReference != null)
         {
-            var packageIndex = GetPackageIndexByLocalName(value.ObjectReference).FirstOrDefault().PackageIndex;
-            return new ObjectPropertyData(fname) { Value = packageIndex };
+            var results = GetPackageIndexByLocalName(value.ObjectReference);
+            if (results == null || !results.Any())
+            {
+                // Object not found - try to find it in the compiled script context and create an import
+                // This handles cases where user adds new object references not in the original asset
+                var packageIndex = TryCreateImportForReference(value.ObjectReference, typeHint);
+                if (packageIndex.Index == 0)
+                {
+                    Console.WriteLine($"Warning: Object reference '{value.ObjectReference}' not found and could not be imported");
+                    return new ObjectPropertyData(fname) { Value = new FPackageIndex(0) };
+                }
+                return new ObjectPropertyData(fname) { Value = packageIndex };
+            }
+            var result = results.First();
+            return new ObjectPropertyData(fname) { Value = result.PackageIndex };
         }
         if (value.ArrayValue != null)
         {
             var arrayProp = new ArrayPropertyData(fname);
             var elements = new List<PropertyData>();
 
+            // Extract inner type from Array<...>
+            string innerTypeHint = typeHint;
+            if (typeHint.StartsWith("Array<") && typeHint.EndsWith(">"))
+            {
+                innerTypeHint = typeHint.Substring(6, typeHint.Length - 7);
+            }
+
             foreach (var element in value.ArrayValue)
             {
                 // For array elements, we need to infer the element type
-                var elementProp = CreatePropertyDataFromValue("0", typeHint, element);
+                var elementProp = CreatePropertyDataFromValue("0", innerTypeHint, element);
                 if (elementProp != null)
                     elements.Add(elementProp);
             }
@@ -817,6 +876,8 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             return "ObjectProperty";
         if (typeHint.StartsWith("Struct<"))
             return "StructProperty";
+        if (typeHint == "SoftObject")
+            return "SoftObjectProperty";
 
         return typeHint switch
         {
@@ -825,6 +886,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             "bool" => "BoolProperty",
             "string" => "StrProperty",
             "byte" => "ByteProperty",
+            "Text" => "TextProperty",
             _ => "ObjectProperty"
         };
     }
@@ -984,6 +1046,78 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Tries to create an import for an object reference that doesn't exist in the package.
+    /// Looks for the import declaration in the KMS file to get the full path.
+    /// </summary>
+    private FPackageIndex TryCreateImportForReference(string objectName, string typeHint)
+    {
+        // Check if this object is already imported through KMS imports
+        // The imports should have been processed during script compilation
+        // We need to find the full path for this object from the compiled context
+
+        // For now, try to infer the import path from KMS file structure
+        // Object names in KMS that reference game content follow pattern: ObjectName
+        // Full paths follow pattern: /Game/Path/To/ObjectName.ObjectName
+
+        // Try to use EnsurePackageImported and EnsureObjectImported to create the import
+        // First, we need to extract the package path from context
+
+        // Since we don't have the full path here, we'll need to look it up from the original KMS imports
+        // For objects like UPC_ChargeModeSpread, check if there's a declaration in the source
+
+        // Extract class name from typeHint like "Object<ItemUpgradeCategory>"
+        string className = "Package";
+        if (typeHint.StartsWith("Object<") && typeHint.EndsWith(">"))
+        {
+            className = typeHint.Substring(7, typeHint.Length - 8);
+        }
+
+        // Try to find the import path by checking existing similar imports
+        // This is a heuristic approach: look for similar named imports
+        if (Package is UAsset uasset)
+        {
+            foreach (var import in uasset.Imports)
+            {
+                if (import.ObjectName.ToString().Contains(objectName.Split('_')[0]))
+                {
+                    // Found a similar import, use its package structure
+                    var packagePath = GetImportPackagePath(import);
+                    if (!string.IsNullOrEmpty(packagePath))
+                    {
+                        // Create new import with similar structure
+                        return EnsureObjectImported(
+                            EnsurePackageImported(packagePath),
+                            objectName,
+                            className
+                        );
+                    }
+                }
+            }
+        }
+
+        return new FPackageIndex(0);
+    }
+
+    /// <summary>
+    /// Gets the package path for an import by traversing its outer chain.
+    /// </summary>
+    private string GetImportPackagePath(Import import)
+    {
+        if (Package is not UAsset uasset)
+            return string.Empty;
+
+        // Traverse to the root package
+        var current = import;
+        while (!current.OuterIndex.IsNull() && current.OuterIndex.IsImport())
+        {
+            current = current.OuterIndex.ToImport(uasset);
+        }
+
+        // The root should be a package
+        return current.ObjectName.ToString();
     }
 
     [GeneratedRegex("_(\\d+)")]
