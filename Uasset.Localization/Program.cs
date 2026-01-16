@@ -18,8 +18,9 @@ public class Program
     {
         if (args.Length == 0)
         {
-            Console.Error.WriteLine("Usage: Uasset.Localization <asset_or_directory> [--ue-version <version>] [--mappings <usmap_path>] [--out <output_json>] ");
-            Console.Error.WriteLine("Example: Uasset.Localization /Users/bytedance/Project/RogueCore/Content/Unlocks/Artifacts/Artifact_RatBastard.uasset --ue-version VER_UE4_27");
+            Console.WriteLine("UAsset.Localization - Localize Unreal Engine assets By Iris");
+            Console.WriteLine("Usage: Uasset.Localization <asset_or_directory> [--ue-version <version>] [--mappings <usmap_path>] [--out <output_json>] ");
+            Console.WriteLine("Example: Uasset.Localization Artifact_RatBastard.uasset --ue-version VER_UE5_6");
             return 1;
         }
 
@@ -31,24 +32,47 @@ public class Program
         EngineVersion ueVersion = ParseEngineVersion(ueVersionArg) ?? EngineVersion.VER_UE4_27;
 
         var results = new List<LocalizationEntry>();
+        Console.Error.WriteLine($"[INFO] Loading mappings: {mappingsPath ?? "(none)"}");
+        Usmap? mappings = !string.IsNullOrEmpty(mappingsPath) ? new Usmap(mappingsPath) : null;
+        Console.Error.WriteLine("[INFO] Mappings loaded successfully");
 
         if (Directory.Exists(targetPath))
         {
-            foreach (var assetFile in EnumerateAssets(targetPath))
+            var assetFiles = EnumerateAssets(targetPath).ToList();
+            Console.Error.WriteLine($"[INFO] Found {assetFiles.Count} assets in {targetPath}");
+            int processed = 0;
+            int failed = 0;
+            foreach (var assetFile in assetFiles)
             {
-                ExtractFromAsset(assetFile, ueVersion, mappingsPath, results);
+                try
+                {
+                    ExtractFromAsset(assetFile, ueVersion, mappings, results);
+                    processed++;
+                    if (processed % 50 == 0)
+                    {
+                        Console.Error.WriteLine($"[INFO] Processed {processed}/{assetFiles.Count} assets, found {results.Count} entries");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    Console.Error.WriteLine($"[WARN] Failed to process {Path.GetFileName(assetFile)}: {ex.Message}");
+                }
             }
+            Console.Error.WriteLine($"[INFO] Completed: {processed} succeeded, {failed} failed, {results.Count} entries found");
         }
         else if (File.Exists(targetPath))
         {
+            Console.Error.WriteLine($"[INFO] Processing single file: {targetPath}");
             if (IsJsonAsset(targetPath))
             {
                 ExtractFromJsonAsset(targetPath, results);
             }
             else
             {
-                ExtractFromAsset(targetPath, ueVersion, mappingsPath, results);
+                ExtractFromAsset(targetPath, ueVersion, mappings, results);
             }
+            Console.Error.WriteLine($"[INFO] Found {results.Count} entries");
         }
         else
         {
@@ -61,12 +85,17 @@ public class Program
             .Select(r => new OutputEntry { asset = r.asset, text = r.source!, hash = r.value! })
             .ToList();
 
+        Console.Error.WriteLine($"[INFO] Writing {simplified.Count} entries to output");
         if (!string.IsNullOrEmpty(outPath))
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
+            var outDir = Path.GetDirectoryName(outPath);
+            if (!string.IsNullOrEmpty(outDir))
+            {
+                Directory.CreateDirectory(outDir);
+            }
             var json = JsonSerializer.Serialize(simplified, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(outPath, json);
-            Console.WriteLine(outPath);
+            Console.Error.WriteLine($"[INFO] Output written to: {outPath}");
         }
         else
         {
@@ -107,9 +136,9 @@ public class Program
         return null;
     }
 
-    private static void ExtractFromAsset(string assetPath, EngineVersion ueVersion, string? mappingsPath, List<LocalizationEntry> sink)
+    private static void ExtractFromAsset(string assetPath, EngineVersion ueVersion, Usmap? mappings, List<LocalizationEntry> sink)
     {
-        UAsset asset = mappingsPath != null ? new UAsset(assetPath, ueVersion, new Usmap(mappingsPath)) : new UAsset(assetPath, ueVersion);
+        UAsset asset = mappings != null ? new UAsset(assetPath, ueVersion, mappings) : new UAsset(assetPath, ueVersion);
 
         foreach (var export in asset.Exports)
         {
