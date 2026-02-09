@@ -9,6 +9,7 @@ using UAssetAPI.ExportTypes;
 using UAssetAPI.FieldTypes;
 using UAssetAPI.Kismet.Bytecode;
 using UAssetAPI.PropertyTypes.Objects;
+using UAssetAPI.PropertyTypes.Structs;
 using UAssetAPI.UnrealTypes;
 
 namespace KismetScript.Linker;
@@ -690,15 +691,33 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             if (variableContext.Initializer != null)
             {
                 var existingPropIndex = cdoExport.Data.FindIndex(p => p.Name.ToString() == variableContext.Symbol.Name);
+                // Construct full type hint including type parameter (e.g., "Struct<PointerToUberGraphFrame>")
+                var typeDecl = variableContext.Symbol.Declaration?.Type;
+                var typeHint = typeDecl?.Text ?? "Object";
+                if (typeDecl?.TypeParameter != null)
+                {
+                    typeHint = $"{typeHint}<{typeDecl.TypeParameter.Text}>";
+                }
                 var propData = CreatePropertyDataFromValue(
                     variableContext.Symbol.Name,
-                    variableContext.Symbol.Declaration?.Type?.Text ?? "Object",
+                    typeHint,
                     variableContext.Initializer);
 
                 if (propData != null)
                 {
                     if (existingPropIndex >= 0)
+                    {
+                        var existingProp = cdoExport.Data[existingPropIndex];
+                        // Preserve text metadata (Namespace, CultureInvariantString) from original property
+                        // since the .kms format only captures the key, not the full text metadata
+                        if (existingProp is TextPropertyData existingText && propData is TextPropertyData newText)
+                        {
+                            newText.HistoryType = existingText.HistoryType;
+                            newText.Namespace ??= existingText.Namespace;
+                            newText.CultureInvariantString ??= existingText.CultureInvariantString;
+                        }
                         cdoExport.Data[existingPropIndex] = propData;
+                    }
                     else
                         cdoExport.Data.Add(propData);
                 }
@@ -828,6 +847,32 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             var result = results.First();
             return new ObjectPropertyData(fname) { Value = result.PackageIndex };
         }
+        // Handle struct types - must be checked before ArrayValue since {} compiles as empty array
+        if (typeHint.StartsWith("Struct<") && typeHint.EndsWith(">") &&
+            (value.ArrayValue != null || value.StructValue != null))
+        {
+            var structTypeName = typeHint.Substring(7, typeHint.Length - 8);
+            var structProp = new StructPropertyData(fname)
+            {
+                StructType = new FName(Package, structTypeName),
+                Value = new List<PropertyData>(),
+                SerializeNone = true,
+            };
+
+            // If there are struct field values (from {key: value} syntax), populate them
+            if (value.StructValue != null)
+            {
+                foreach (var kvp in value.StructValue)
+                {
+                    var fieldProp = CreatePropertyDataFromValue(kvp.Key, "Object", kvp.Value);
+                    if (fieldProp != null)
+                        structProp.Value.Add(fieldProp);
+                }
+            }
+
+            return structProp;
+        }
+
         if (value.ArrayValue != null)
         {
             var arrayProp = new ArrayPropertyData(fname);
