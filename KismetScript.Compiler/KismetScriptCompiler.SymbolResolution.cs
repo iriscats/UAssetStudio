@@ -224,9 +224,10 @@ public partial class KismetScriptCompiler
                 // For function calls, get the symbol name from the function name (first argument)
                 return GetSymbolName(callOperator.Arguments.First().Expression);
             }
-            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_Context))
+            else if (IsIntrinsicTokenAny(callOperator.Identifier.Text,
+                EExprToken.EX_Context, EExprToken.EX_ClassContext, EExprToken.EX_InterfaceContext))
             {
-                // For Context, get the symbol name from the object expression (first argument)
+                // For Context/ClassContext/InterfaceContext, get the symbol name from the object expression (first argument)
                 return GetSymbolName(callOperator.Arguments.First().Expression);
             }
             else
@@ -320,9 +321,10 @@ public partial class KismetScriptCompiler
                 // For function calls, get the symbol from the function name (first argument)
                 return GetSymbol<T>(callOperator.Arguments.First().Expression);
             }
-            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_Context))
+            else if (IsIntrinsicTokenAny(callOperator.Identifier.Text,
+                EExprToken.EX_Context, EExprToken.EX_ClassContext, EExprToken.EX_InterfaceContext))
             {
-                // For Context, get the symbol from the object expression (first argument)
+                // For Context/ClassContext/InterfaceContext, get the symbol from the object expression (first argument)
                 return GetSymbol<T>(callOperator.Arguments.First().Expression);
             }
             else

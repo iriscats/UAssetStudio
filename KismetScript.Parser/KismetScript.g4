@@ -51,12 +51,12 @@ namespaceIdentifier
 	;
 
 classDeclarationStatement
-	: attributeList? modifier* (Class | Struct | Identifier) Identifier (':' Identifier (',' Identifier)* )? '{' declarationStatement* '}'
-	| attributeList? modifier* (Class | Struct) Identifier (':' Identifier (',' Identifier)* )? Semicolon
+	: attributeList* modifier* (Class | Struct | Identifier) Identifier (':' Identifier (',' Identifier)* )? '{' declarationStatement* '}'
+	| attributeList* modifier* (Class | Struct) Identifier (':' Identifier (',' Identifier)* )? Semicolon
 	;
 
 objectDeclarationStatement
-	: attributeList? Object Identifier ':' Identifier '{' objectPropertyAssignment* '}'
+	: attributeList* Object Identifier ':' Identifier '{' objectPropertyAssignment* '}'
 	;
 
 objectPropertyAssignment
@@ -64,12 +64,12 @@ objectPropertyAssignment
 	;
 
 procedureDeclarationStatement
-	: attributeList? modifier* typeIdentifier Identifier parameterList compoundStatement
-	| attributeList? modifier* typeIdentifier Identifier parameterList Semicolon
+	: attributeList* modifier* typeIdentifier Identifier parameterList compoundStatement
+	| attributeList* modifier* typeIdentifier Identifier parameterList Semicolon
 	;
 
 variableDeclarationStatement
-	: attributeList? modifier* typeIdentifier Identifier ('=' expression)? Semicolon
+	: attributeList* modifier* typeIdentifier Identifier ('=' expression)? Semicolon
 	;
 
 arraySignifier

@@ -423,11 +423,12 @@ public class KismetScriptASTParser
     {
         classDeclaration = CreateAstNode<ClassDeclaration>(context);
 
-        if (context.attributeList() != null)
+        var classAttrLists = context.attributeList();
+        if (classAttrLists != null && classAttrLists.Length > 0)
         {
-            if (!TryParseAttributeList(context.attributeList(), out var attributes))
+            if (!TryParseAttributeLists(classAttrLists, out var attributes))
             {
-                LogError(context.attributeList(), "Failed to parse class attribute list");
+                LogError(context, "Failed to parse class attribute list");
                 return false;
             }
 
@@ -511,11 +512,12 @@ public class KismetScriptASTParser
         objectDeclaration = CreateAstNode<ObjectDeclaration>(context);
 
         // Parse attributes if present
-        if (context.attributeList() != null)
+        var objAttrLists = context.attributeList();
+        if (objAttrLists != null && objAttrLists.Length > 0)
         {
-            if (!TryParseAttributeList(context.attributeList(), out var attributes))
+            if (!TryParseAttributeLists(objAttrLists, out var attributes))
             {
-                LogError(context.attributeList(), "Failed to parse object attribute list");
+                LogError(context, "Failed to parse object attribute list");
                 return false;
             }
             objectDeclaration.Attributes.AddRange(attributes);
@@ -597,11 +599,11 @@ public class KismetScriptASTParser
 
         procedureDeclaration = CreateAstNode<ProcedureDeclaration>(context);
 
-        // Parse attributes
-        var attributeListContext = context.attributeList();
-        if (attributeListContext != null)
+        // Parse attributes (may have multiple attributeList groups)
+        var procAttrLists = context.attributeList();
+        if (procAttrLists != null && procAttrLists.Length > 0)
         {
-            if (!TryParseAttributeList(attributeListContext, out var attributes))
+            if (!TryParseAttributeLists(procAttrLists, out var attributes))
                 return false;
 
             procedureDeclaration.Attributes.AddRange(attributes);
@@ -696,6 +698,22 @@ public class KismetScriptASTParser
         return true;
     }
 
+    /// <summary>
+    /// Parses multiple attribute lists (from attributeList* grammar rule) and merges them into a single list.
+    /// </summary>
+    private bool TryParseAttributeLists(KismetScriptParser.AttributeListContext[] contexts, out List<Syntax.Statements.Declarations.AttributeDeclaration> attributes)
+    {
+        attributes = new List<Syntax.Statements.Declarations.AttributeDeclaration>();
+        if (contexts == null) return true;
+        foreach (var ctx in contexts)
+        {
+            if (!TryParseAttributeList(ctx, out var attrs))
+                return false;
+            attributes.AddRange(attrs);
+        }
+        return true;
+    }
+
     private bool TryParseVariableDeclaration(KismetScriptParser.VariableDeclarationStatementContext context, out VariableDeclaration variableDeclaration)
     {
         LogTrace("Parsing variable declaration");
@@ -708,10 +726,10 @@ public class KismetScriptASTParser
         //    variableDeclaration = CreateAstNode<ArrayVariableDeclaration>(context);
         variableDeclaration = CreateAstNode<VariableDeclaration>(context);
 
-        var attributeListContext = context.attributeList();
-        if (attributeListContext != null)
+        var varAttrLists = context.attributeList();
+        if (varAttrLists != null && varAttrLists.Length > 0)
         {
-            if (!TryParseAttributeList(attributeListContext, out var attributes))
+            if (!TryParseAttributeLists(varAttrLists, out var attributes))
                 return false;
 
             variableDeclaration.Attributes.AddRange(attributes);

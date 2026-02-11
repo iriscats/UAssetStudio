@@ -141,7 +141,15 @@ public partial class KismetScriptCompiler
                         "Interface" => ContextType.Interface,
                         "Class" => ContextType.Class,
                         "Object" => ContextType.Object,
-                        _ => throw new NotImplementedException()
+                        "Delegate" => ContextType.SubContext,
+                        "MulticastInlineDelegate" => ContextType.SubContext,
+                        "MulticastSparseDelegate" => ContextType.SubContext,
+                        "Array" => ContextType.SubContext,
+                        "Map" => ContextType.SubContext,
+                        "Set" => ContextType.SubContext,
+                        "SoftObject" => ContextType.SubContext,
+                        "SoftClass" => ContextType.SubContext,
+                        _ => throw new NotImplementedException($"Unhandled constructed type: {variableSymbol.Declaration.Type.Text}")
                     };
                 }
                 else

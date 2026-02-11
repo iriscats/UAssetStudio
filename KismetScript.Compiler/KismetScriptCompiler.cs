@@ -1941,8 +1941,15 @@ public partial class KismetScriptCompiler
     /// <param name="name"></param>
     /// <returns></returns>
     private bool IsIntrinsicFunction(string name)
-        => typeof(EExprToken).GetEnumNames().Contains(name)
-           || typeof(EExprToken).GetEnumNames().Contains($"EX_{name}");
+    {
+        // Check if the name matches any EExprToken enum name (with or without EX_ prefix)
+        var token = typeof(EExprToken).GetEnumNames().Contains(name)
+                    || typeof(EExprToken).GetEnumNames().Contains($"EX_{name}");
+        if (!token) return false;
+        // Exclude sentinel/marker values that are not real instructions
+        var resolved = GetInstrinsicFunctionToken(name);
+        return resolved != EExprToken.EX_Max;
+    }
 
     /// <summary>
     /// Checks if a function call identifier matches a specific intrinsic token.

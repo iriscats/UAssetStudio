@@ -44,6 +44,14 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     // Pending expression replacements (old -> new) to apply after the Flatten() fixup loop
     private Dictionary<KismetExpression, KismetExpression> _pendingExprReplacements = new();
 
+    // Queue to preserve original expression types for EX_Context subtypes
+    // (EX_ClassContext, EX_Context_FailSilent) that the compiler may downgrade to EX_Context.
+    private Queue<Type> _preservedContextTypes = new();
+
+    // Queue to preserve original EX_StructMemberContext expressions that the compiler
+    // may incorrectly compile as EX_Context. These need full expression replacement.
+    private Queue<KismetExpression> _preservedStructMemberContexts = new();
+
     // Queues to preserve original bytecode offset values (PushingAddress, CodeOffset, etc.)
     // These are restored after expression type replacements to maintain correct byte offsets.
     private Queue<uint> _preservedPushingAddresses = new();
@@ -1237,8 +1245,34 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                             }
                             else if (preserved.VirtualFunctionName != null)
                             {
-                                // Same type, just use preserved name
                                 vfQueue.Dequeue();
+                                // Check for VirtualFunction/LocalVirtualFunction type mismatch
+                                if (preserved.ExprType != expr.GetType())
+                                {
+                                    KismetExpression? vfReplacement = null;
+                                    if (preserved.ExprType == typeof(EX_VirtualFunction))
+                                    {
+                                        vfReplacement = new EX_VirtualFunction()
+                                        {
+                                            VirtualFunctionName = preserved.VirtualFunctionName,
+                                            Parameters = expr.Parameters
+                                        };
+                                    }
+                                    else if (preserved.ExprType == typeof(EX_LocalVirtualFunction))
+                                    {
+                                        vfReplacement = new EX_LocalVirtualFunction()
+                                        {
+                                            VirtualFunctionName = preserved.VirtualFunctionName,
+                                            Parameters = expr.Parameters
+                                        };
+                                    }
+                                    if (vfReplacement != null)
+                                    {
+                                        _pendingExprReplacements[expr] = vfReplacement;
+                                        break;
+                                    }
+                                }
+                                // Same type, just use preserved name
                                 expr.VirtualFunctionName = preserved.VirtualFunctionName;
                                 break;
                             }
@@ -1273,6 +1307,20 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                                     expr.Parameters.Length == 1 && expr.Parameters[0] is EX_IntConst intParam)
                                 {
                                     intParam.Value = preserved.UbergraphOffset.Value;
+                                }
+                                // Check for FinalFunction subtype mismatch (e.g., EX_LocalFinalFunction)
+                                if (preserved.ExprType != expr.GetType() &&
+                                    preserved.ExprType.IsSubclassOf(typeof(EX_FinalFunction)) &&
+                                    preserved.ExprType != typeof(EX_CallMath) && preserved.ExprType != typeof(EX_CallMulticastDelegate))
+                                {
+                                    if (preserved.ExprType == typeof(EX_LocalFinalFunction))
+                                    {
+                                        _pendingExprReplacements[expr] = new EX_LocalFinalFunction()
+                                        {
+                                            StackNode = expr.StackNode,
+                                            Parameters = expr.Parameters
+                                        };
+                                    }
                                 }
                                 break;
                             }
@@ -1323,6 +1371,38 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
                 case EX_Context expr:
                     FixPropertyPointer(ref expr.RValuePointer);
+                    // Restore original context subtype (EX_ClassContext, EX_Context_FailSilent)
+                    // Only for same-structure types (subclass relationship with EX_Context)
+                    if (_preservedContextTypes.Count > 0)
+                    {
+                        var originalType = _preservedContextTypes.Dequeue();
+                        if (expr.GetType() != originalType && originalType.IsSubclassOf(typeof(EX_Context)))
+                        {
+                            KismetExpression? replacement = null;
+                            if (originalType == typeof(EX_ClassContext))
+                            {
+                                replacement = new EX_ClassContext()
+                                {
+                                    ObjectExpression = expr.ObjectExpression,
+                                    Offset = expr.Offset,
+                                    RValuePointer = expr.RValuePointer,
+                                    ContextExpression = expr.ContextExpression
+                                };
+                            }
+                            else if (originalType == typeof(EX_Context_FailSilent))
+                            {
+                                replacement = new EX_Context_FailSilent()
+                                {
+                                    ObjectExpression = expr.ObjectExpression,
+                                    Offset = expr.Offset,
+                                    RValuePointer = expr.RValuePointer,
+                                    ContextExpression = expr.ContextExpression
+                                };
+                            }
+                            if (replacement != null)
+                                _pendingExprReplacements[expr] = replacement;
+                        }
+                    }
                     break;
 
                 case EX_DefaultVariable expr:
@@ -1797,6 +1877,8 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         _k2NodeVariablesWithEmptyPath.Clear();
         _originalFunctionCalls.Clear();
         _pendingExprReplacements.Clear();
+        _preservedContextTypes.Clear();
+        _preservedStructMemberContexts.Clear();
         _preservedPushingAddresses.Clear();
         _preservedJumpOffsets.Clear();
         _preservedJumpIfNotOffsets.Clear();
@@ -1905,6 +1987,20 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 var funcName = virtualFunc.VirtualFunctionName?.ToString();
                 if (funcName != null)
                     EnqueueFunctionCall(funcName, new PreservedFunctionCall(expr.GetType(), null, virtualFunc.VirtualFunctionName, null));
+            }
+
+            // Preserve original expression type for EX_Context subtypes
+            // The compiler may downgrade EX_ClassContext/EX_Context_FailSilent to EX_Context
+            if (expr is EX_Context)
+            {
+                _preservedContextTypes.Enqueue(expr.GetType());
+            }
+
+            // Preserve original EX_StructMemberContext expressions
+            // The compiler may incorrectly compile these as EX_Context
+            if (expr is EX_StructMemberContext)
+            {
+                _preservedStructMemberContexts.Enqueue(expr);
             }
 
             // Preserve bytecode offset values for restoration after expression type replacements
