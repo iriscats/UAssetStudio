@@ -202,32 +202,31 @@ public partial class KismetScriptCompiler
         }
         else if (expression is CallOperator callOperator)
         {
-            if (callOperator.Identifier.Text == "EX_ArrayGetByRef")
+            if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_ArrayGetByRef))
             {
                 // 0: Array, 1: Index
                 var arrayObject = callOperator.Arguments.First();
                 return GetSymbolName(arrayObject.Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_InstanceVariable")
+            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_InstanceVariable))
             {
                 return GetSymbolName(callOperator.Arguments.First().Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_SwitchValue")
+            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_SwitchValue))
             {
                 var defaultTerm = callOperator.Arguments[2];
                 return GetSymbolName(defaultTerm.Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_FinalFunction" ||
-                     callOperator.Identifier.Text == "EX_VirtualFunction" ||
-                     callOperator.Identifier.Text == "EX_LocalFinalFunction" ||
-                     callOperator.Identifier.Text == "EX_LocalVirtualFunction")
+            else if (IsIntrinsicTokenAny(callOperator.Identifier.Text,
+                EExprToken.EX_FinalFunction, EExprToken.EX_VirtualFunction,
+                EExprToken.EX_LocalFinalFunction, EExprToken.EX_LocalVirtualFunction))
             {
                 // For function calls, get the symbol name from the function name (first argument)
                 return GetSymbolName(callOperator.Arguments.First().Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_Context")
+            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_Context))
             {
-                // For EX_Context, get the symbol name from the object expression (first argument)
+                // For Context, get the symbol name from the object expression (first argument)
                 return GetSymbolName(callOperator.Arguments.First().Expression);
             }
             else
@@ -284,13 +283,13 @@ public partial class KismetScriptCompiler
         }
         else if (expression is CallOperator callOperator)
         {
-            if (callOperator.Identifier.Text == "EX_ArrayGetByRef")
+            if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_ArrayGetByRef))
             {
                 // 0: Array, 1: Index
                 var arrayObject = callOperator.Arguments.First();
                 return GetSymbol<T>(arrayObject.Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_InstanceVariable")
+            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_InstanceVariable))
             {
                 if (Context == null)
                 {
@@ -309,22 +308,21 @@ public partial class KismetScriptCompiler
                     return GetSymbol<T>(callOperator.Arguments.First().Expression);
                 }
             }
-            else if (callOperator.Identifier.Text == "EX_SwitchValue")
+            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_SwitchValue))
             {
                 var defaultTerm = callOperator.Arguments[2];
                 return GetSymbol<T>(defaultTerm.Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_FinalFunction" ||
-                     callOperator.Identifier.Text == "EX_VirtualFunction" ||
-                     callOperator.Identifier.Text == "EX_LocalFinalFunction" ||
-                     callOperator.Identifier.Text == "EX_LocalVirtualFunction")
+            else if (IsIntrinsicTokenAny(callOperator.Identifier.Text,
+                EExprToken.EX_FinalFunction, EExprToken.EX_VirtualFunction,
+                EExprToken.EX_LocalFinalFunction, EExprToken.EX_LocalVirtualFunction))
             {
                 // For function calls, get the symbol from the function name (first argument)
                 return GetSymbol<T>(callOperator.Arguments.First().Expression);
             }
-            else if (callOperator.Identifier.Text == "EX_Context")
+            else if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_Context))
             {
-                // For EX_Context, get the symbol from the object expression (first argument)
+                // For Context, get the symbol from the object expression (first argument)
                 return GetSymbol<T>(callOperator.Arguments.First().Expression);
             }
             else

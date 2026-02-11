@@ -48,7 +48,7 @@ public partial class KismetScriptCompiler
         }
         else if (expression is CallOperator callOperator)
         {
-            if (callOperator.Identifier.Text == "EX_ArrayGetByRef")
+            if (IsIntrinsicToken(callOperator.Identifier.Text, EExprToken.EX_ArrayGetByRef))
             {
                 var arrayObject = callOperator.Arguments.First();
                 return GetPackageIndex(arrayObject);
@@ -88,6 +88,12 @@ public partial class KismetScriptCompiler
             return new FPackageIndex(0);
 
         var symbol = GetSymbol(name, context);
+        // If not found in the specific context, also try the class hierarchy
+        // This prevents creating placeholders that shadow correctly declared symbols in base classes
+        if (symbol == null)
+        {
+            symbol = _classContext?.Symbol?.GetSymbol<ProcedureSymbol>(name);
+        }
         if (symbol == null)
         {
             // Create a placeholder symbol for external/unknown members

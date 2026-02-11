@@ -8,8 +8,8 @@ CLI_PROJ="$REPO_ROOT/UAssetStudio.Cli/UAssetStudio.Cli.csproj"
 OUTDIR="$REPO_ROOT/script/output"
 
 # Explicit KMS/script and original asset
-KMS_FILE="/Users/bytedance/Project/UAssetStudio/script/test_case_4_27/OC_PGL_Ammo_C.kms"
-ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/test_case_4_27/OC_PGL_Ammo_C.uasset"
+KMS_FILE="/Users/bytedance/Project/UAssetStudio/script/BP_PetComponent.kms"
+ASSET_PATH="/Users/bytedance/Project/UAssetStudio/script/BP_PetComponent.uasset"
 
 # Optional: set to a valid UE4.27 .usmap if needed
 USMAP_PATH=""  # Optional: set to a valid UE4.27 .usmap if needed

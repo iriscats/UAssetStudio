@@ -529,15 +529,33 @@ public partial class KismetScriptCompiler
 
         foreach (var prop in objectDeclaration.Properties)
         {
+            // Construct full type string including nested type parameters
+            // (e.g., "Array<Struct<GameActivitySubTask>>")
+            var typeText = GetFullTypeHintFromTypeIdentifier(prop.Type);
+
             context.Properties.Add(new CompiledPropertyAssignment
             {
-                Type = prop.Type.Text,
+                Type = typeText,
                 Name = prop.Name.Text,
                 Value = CompilePropertyValue(prop.Value)
             });
         }
 
         return context;
+    }
+
+    /// <summary>
+    /// Recursively constructs a full type hint string from a TypeIdentifier chain.
+    /// e.g., Array -> Struct -> GameActivitySubTask becomes "Array<Struct<GameActivitySubTask>>"
+    /// </summary>
+    private static string GetFullTypeHintFromTypeIdentifier(TypeIdentifier typeDecl)
+    {
+        var text = typeDecl.Text ?? "Object";
+        if (typeDecl.TypeParameter != null)
+        {
+            text = $"{text}<{GetFullTypeHintFromTypeIdentifier(typeDecl.TypeParameter)}>";
+        }
+        return text;
     }
 
     /// <summary>
@@ -1925,6 +1943,27 @@ public partial class KismetScriptCompiler
     private bool IsIntrinsicFunction(string name)
         => typeof(EExprToken).GetEnumNames().Contains(name)
            || typeof(EExprToken).GetEnumNames().Contains($"EX_{name}");
+
+    /// <summary>
+    /// Checks if a function call identifier matches a specific intrinsic token.
+    /// Handles both "EX_Xyz" and "Xyz" (without prefix) forms.
+    /// </summary>
+    private bool IsIntrinsicToken(string name, EExprToken token)
+    {
+        if (!IsIntrinsicFunction(name)) return false;
+        return GetInstrinsicFunctionToken(name) == token;
+    }
+
+    /// <summary>
+    /// Checks if a function call identifier matches any of the specified intrinsic tokens.
+    /// Handles both "EX_Xyz" and "Xyz" (without prefix) forms.
+    /// </summary>
+    private bool IsIntrinsicTokenAny(string name, params EExprToken[] tokens)
+    {
+        if (!IsIntrinsicFunction(name)) return false;
+        var resolved = GetInstrinsicFunctionToken(name);
+        return tokens.Contains(resolved);
+    }
 
     /// <summary>
     /// Derives the expression token (opcode) from the function name.

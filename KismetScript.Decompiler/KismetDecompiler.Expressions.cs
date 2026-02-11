@@ -19,34 +19,34 @@ namespace KismetScript.Decompiler
                     {
                         var castType = FormatString(expr.ConversionType.ToString());
                         var target = FormatExpression(expr.Target, expr);
-                        return $"EX_PrimitiveCast({castType}, {target})";
+                        return $"PrimitiveCast({castType}, {target})";
                     }
                 case EX_SetSet expr:
                     {
                         var setProperty = FormatExpression(expr.SetProperty, expr);
                         var elements = string.Join(", ", expr.Elements.Select(x => FormatExpression(x, expr)));
                         if (!string.IsNullOrWhiteSpace(elements))
-                            return $"EX_SetSet({setProperty}, {elements})";
+                            return $"SetSet({setProperty}, {elements})";
                         else
-                            return $"EX_SetSet()";
+                            return $"SetSet()";
                     }
                 case EX_SetConst expr:
                     {
                         var innerProperty = FormatString(_asset.GetPropertyName(expr.InnerProperty, _useFullPropertyNames));
                         var elements = string.Join(", ", expr.Elements.Select(x => FormatExpression(x, expr)));
                         if (!string.IsNullOrWhiteSpace(elements))
-                            return $"EX_SetConst({innerProperty}, {elements})";
+                            return $"SetConst({innerProperty}, {elements})";
                         else
-                            return $"EX_SetConst()";
+                            return $"SetConst()";
                     }
                 case EX_SetMap expr:
                     {
                         var prop = FormatExpression(expr.MapProperty, expr);
                         var elems = string.Join(", ", expr.Elements.Select(x => FormatExpression(x, expr)));
                         if (!string.IsNullOrWhiteSpace(elems))
-                            return $"EX_SetMap({prop}, {elems})";
+                            return $"SetMap({prop}, {elems})";
                         else
-                            return $"EX_SetMap()";
+                            return $"SetMap()";
                     }
                 case EX_MapConst expr:
                     {
@@ -54,27 +54,27 @@ namespace KismetScript.Decompiler
                         var valueProperty = FormatString(_asset.GetPropertyName(expr.ValueProperty, _useFullPropertyNames));
                         var elements = string.Join(", ", expr.Elements.Select(x => FormatExpression(x, expr)));
                         if (!string.IsNullOrWhiteSpace(elements))
-                            return $"EX_MapConst({keyProperty}, {valueProperty}, {elements})";
+                            return $"MapConst({keyProperty}, {valueProperty}, {elements})";
                         else
-                            return $"EX_MapConst({keyProperty}, {valueProperty})";
+                            return $"MapConst({keyProperty}, {valueProperty})";
                     }
                 case EX_ObjToInterfaceCast expr:
                     {
                         var classPtr = FormatString(_asset.GetName(expr.ClassPtr));
                         var target = FormatExpression(expr.Target, expr);
-                        return $"EX_ObjToInterfaceCast({classPtr}, {target})";
+                        return $"ObjToInterfaceCast({classPtr}, {target})";
                     }
                 case EX_CrossInterfaceCast expr:
                     {
                         var classPtr = FormatString(_asset.GetName(expr.ClassPtr));
                         var target = FormatExpression(expr.Target, expr);
-                        return $"EX_CrossInterfaceCast({classPtr}, {target})";
+                        return $"CrossInterfaceCast({classPtr}, {target})";
                     }
                 case EX_InterfaceToObjCast expr:
                     {
                         var classPtr = FormatString(_asset.GetName(expr.ClassPtr));
                         var target = FormatExpression(expr.Target, expr);
-                        return $"EX_InterfaceToObjCast({classPtr}, {target})";
+                        return $"InterfaceToObjCast({classPtr}, {target})";
                     }
                 case EX_Let expr:
                     {
@@ -87,13 +87,13 @@ namespace KismetScript.Decompiler
                     {
                         var variableExpression = FormatExpression(expr.VariableExpression, expr);
                         var assignmentExpression = FormatExpression(expr.AssignmentExpression, expr);
-                        return $"EX_LetObj({variableExpression},{assignmentExpression})";
+                        return $"LetObj({variableExpression},{assignmentExpression})";
                     }
                 case EX_LetWeakObjPtr expr:
                     {
                         var variableExpression = FormatExpression(expr.VariableExpression, expr);
                         var assignmentExpression = FormatExpression(expr.AssignmentExpression, expr);
-                        return $"EX_LetWeakObjPtr({variableExpression},{assignmentExpression})";
+                        return $"LetWeakObjPtr({variableExpression},{assignmentExpression})";
                     }
                 case EX_LetBool expr:
                     {
@@ -105,7 +105,7 @@ namespace KismetScript.Decompiler
                     {
                         var destinationProperty = FormatString(_asset.GetPropertyName(expr.DestinationProperty, _useFullPropertyNames));
                         var assignmentExpression = FormatExpression(expr.AssignmentExpression, expr);
-                        return $"EX_LetValueOnPersistentFrame({destinationProperty}, {assignmentExpression})";
+                        return $"LetValueOnPersistentFrame({destinationProperty}, {assignmentExpression})";
                     }
                 case EX_StructMemberContext expr:
                     {
@@ -117,7 +117,7 @@ namespace KismetScript.Decompiler
                     {
                         var variableExpression = FormatExpression(expr.VariableExpression, expr);
                         var assignmentExpression = FormatExpression(expr.AssignmentExpression, expr);
-                        return $"EX_LetDelegate({variableExpression},{assignmentExpression})";
+                        return $"LetDelegate({variableExpression},{assignmentExpression})";
                     }
                 case EX_LocalVirtualFunction expr:
                     {
@@ -152,9 +152,9 @@ namespace KismetScript.Decompiler
                             var virtualFunctionName = FormatString(expr.VirtualFunctionName.ToString());
 
                             if (string.IsNullOrWhiteSpace(parameters))
-                                return $"EX_LocalVirtualFunction({virtualFunctionName})";
+                                return $"LocalVirtualFunction({virtualFunctionName})";
                             else
-                                return $"EX_LocalVirtualFunction({virtualFunctionName}, {parameters})";
+                                return $"LocalVirtualFunction({virtualFunctionName}, {parameters})";
                         }
                     }
                 case EX_LocalFinalFunction expr:
@@ -226,7 +226,7 @@ namespace KismetScript.Decompiler
                                 expr.Parameters[0] is EX_IntConst firstParamInt)
                             {
                                 var uberGraphFunctionLabel = FormatCodeOffset((uint)firstParamInt.Value, functionName, _function.ObjectName.ToString());
-                                return $"EX_LocalFinalFunction({functionName}, {uberGraphFunctionLabel})";
+                                return $"LocalFinalFunction({functionName}, {uberGraphFunctionLabel})";
                             }
                             else
                             {
@@ -234,9 +234,9 @@ namespace KismetScript.Decompiler
                                 var isClassMemberFunction = (functionExport?.OuterIndex.IsExport() ?? false) && (functionExport?.OuterIndex.ToExport(_asset) == _class);
 
                                 if (string.IsNullOrWhiteSpace(parameters))
-                                    return $"EX_LocalFinalFunction({functionName})";
+                                    return $"LocalFinalFunction({functionName})";
                                 else
-                                    return $"EX_LocalFinalFunction({functionName}, {parameters})";
+                                    return $"LocalFinalFunction({functionName}, {parameters})";
                             }
                         }
                     }
@@ -245,7 +245,7 @@ namespace KismetScript.Decompiler
                         // TODO: validate context
                         var variableExpression = FormatExpression(expr.VariableExpression, expr);
                         var assignmentExpression = FormatExpression(expr.AssignmentExpression, expr);
-                        return $"EX_LetMulticastDelegate({variableExpression},{assignmentExpression})";
+                        return $"LetMulticastDelegate({variableExpression},{assignmentExpression})";
                     }
                 case EX_ComputedJump expr:
                     {
@@ -265,7 +265,7 @@ namespace KismetScript.Decompiler
                 case EX_DefaultVariable expr:
                     {
                         var variable = FormatString(_asset.GetPropertyName(expr.Variable, _useFullPropertyNames));
-                        return $"EX_DefaultVariable({variable})";
+                        return $"DefaultVariable({variable})";
                     }
                 case EX_InstanceVariable expr:
                     {
@@ -280,7 +280,7 @@ namespace KismetScript.Decompiler
                         else
                         {
                             var variable = FormatString(_asset.GetPropertyName(expr.Variable, _useFullPropertyNames));
-                            return $"EX_InstanceVariable({variable})";
+                            return $"InstanceVariable({variable})";
                         }
                     }
                 case EX_LocalOutVariable expr:
@@ -291,11 +291,11 @@ namespace KismetScript.Decompiler
                 case EX_InterfaceContext expr:
                     {
                         var interfaceValue = FormatExpression(expr.InterfaceValue, expr);
-                        return $"EX_InterfaceContext({interfaceValue})";
+                        return $"InterfaceContext({interfaceValue})";
                     }
                 case EX_DeprecatedOp4A expr:
                     {
-                        return $"EX_DeprecatedOp4A()";
+                        return $"DeprecatedOp4A()";
                     }
                 case EX_Nothing expr:
                     return "";
@@ -303,11 +303,11 @@ namespace KismetScript.Decompiler
                     return $"";
                 case EX_IntZero expr:
                     {
-                        return $"EX_IntZero()";
+                        return $"IntZero()";
                     }
                 case EX_IntOne expr:
                     {
-                        return $"EX_IntOne()";
+                        return $"IntOne()";
                     }
                 case EX_True expr:
                     return "true";
@@ -315,11 +315,11 @@ namespace KismetScript.Decompiler
                     return "false";
                 case EX_NoObject expr:
                     {
-                        return $"EX_NoObject()";
+                        return $"NoObject()";
                     }
                 case EX_NoInterface expr:
                     {
-                        return $"EX_NoInterface()";
+                        return $"NoInterface()";
                     }
                 case EX_Self:
                     return "this";
@@ -371,9 +371,9 @@ namespace KismetScript.Decompiler
                             var @delegate = FormatExpression(expr.Delegate, expr);
 
                             if (string.IsNullOrWhiteSpace(parameters))
-                                return $"EX_CallMulticastDelegate({context}.{stackNode}, {@delegate})";
+                                return $"CallMulticastDelegate({context}.{stackNode}, {@delegate})";
                             else
-                                return $"EX_CallMulticastDelegate({context}.{stackNode}, {parameters}, {@delegate})";
+                                return $"CallMulticastDelegate({context}.{stackNode}, {parameters}, {@delegate})";
                         }
                         else
                         {
@@ -382,9 +382,9 @@ namespace KismetScript.Decompiler
                             var @delegate = FormatExpression(expr.Delegate, expr);
 
                             if (string.IsNullOrWhiteSpace(parameters))
-                                return $"EX_CallMulticastDelegate({stackNode}, {@delegate})";
+                                return $"CallMulticastDelegate({stackNode}, {@delegate})";
                             else
-                                return $"EX_CallMulticastDelegate({stackNode}, {parameters}, {@delegate})";
+                                return $"CallMulticastDelegate({stackNode}, {parameters}, {@delegate})";
                         }
                     }
                 case EX_FinalFunction expr:
@@ -423,9 +423,9 @@ namespace KismetScript.Decompiler
 
                             stackNode = FormatString(stackNode);
                             if (string.IsNullOrWhiteSpace(parameters))
-                                return $"EX_FinalFunction({stackNode})";
+                                return $"FinalFunction({stackNode})";
                             else
-                                return $"EX_FinalFunction({stackNode}, {parameters})";
+                                return $"FinalFunction({stackNode}, {parameters})";
                         }
                     }
                 case EX_VirtualFunction expr:
@@ -467,9 +467,9 @@ namespace KismetScript.Decompiler
 
                             var virtualFunctionName = FormatString(expr.VirtualFunctionName.ToString());
                             if (string.IsNullOrWhiteSpace(parameters))
-                                return $"EX_VirtualFunction({virtualFunctionName})";
+                                return $"VirtualFunction({virtualFunctionName})";
                             else
-                                return $"EX_VirtualFunction({virtualFunctionName}, {parameters})";
+                                return $"VirtualFunction({virtualFunctionName}, {parameters})";
 
                             //var virtualFunctionName = FormatString(expr.VirtualFunctionName.ToString());
                             //if (string.IsNullOrWhiteSpace(parameters))
@@ -480,8 +480,9 @@ namespace KismetScript.Decompiler
                     }
                 case EX_Context expr:
                     {
-                        // Always generate explicit EX_Context intrinsic call
+                        // Generate explicit Context() intrinsic call
                         // This preserves the Context information during decompile->compile round-trip
+                        // (dot syntax is not safe because compiler type resolution may fail for members)
                         var @object = FormatExpression(expr.ObjectExpression, expr);
 
                         // Compile context expression WITHOUT using context (to avoid nested member access syntax)
@@ -490,8 +491,7 @@ namespace KismetScript.Decompiler
                         try
                         {
                             var contextExpression = FormatExpression(expr.ContextExpression, expr);
-                            // Generate EX_Context(object, contextExpression) intrinsic call
-                            return $"EX_Context({@object}, {contextExpression})";
+                            return $"Context({@object}, {contextExpression})";
                         }
                         finally
                         {
@@ -504,7 +504,7 @@ namespace KismetScript.Decompiler
                     {
                         //var target = FormatCodeOffset(expr.Value);
                         var target = expr.Value; // TODO
-                        return $"EX_SkipOffsetConst({target})";
+                        return $"SkipOffsetConst({target})";
                     }
                 case EX_FloatConst expr:
                     return $"{expr.Value}f";
@@ -518,30 +518,30 @@ namespace KismetScript.Decompiler
                         switch (expr.Value.TextLiteralType)
                         {
                             case EBlueprintTextLiteralType.Empty:
-                                return $"EX_TextConst({type})";
+                                return $"TextConst({type})";
                             case EBlueprintTextLiteralType.LocalizedText:
                                 {
                                     var localizedSource = FormatExpression(expr.Value.LocalizedSource, expr);
                                     var localizedKey = FormatExpression(expr.Value.LocalizedKey, expr);
                                     var localizedNamespace = FormatExpression(expr.Value.LocalizedNamespace, expr);
-                                    return $"EX_TextConst({type}, {localizedSource}, {localizedKey}, {localizedNamespace})";
+                                    return $"TextConst({type}, {localizedSource}, {localizedKey}, {localizedNamespace})";
                                 }
                             case EBlueprintTextLiteralType.InvariantText:
                                 {
                                     var invariantLiteralString = FormatExpression(expr.Value.InvariantLiteralString, expr);
-                                    return $"EX_TextConst({type}, {invariantLiteralString})";
+                                    return $"TextConst({type}, {invariantLiteralString})";
                                 }
                             case EBlueprintTextLiteralType.LiteralString:
                                 {
                                     var literalString = FormatExpression(expr.Value.LiteralString, expr);
-                                    return $"EX_TextConst({type}, {literalString})";
+                                    return $"TextConst({type}, {literalString})";
                                 }
                             case EBlueprintTextLiteralType.StringTableEntry:
                                 {
                                     var stringTableAsset = _asset.GetName(expr.Value.StringTableAsset);
                                     var stringTableId = FormatExpression(expr.Value.StringTableId, expr);
                                     var stringTableKey = FormatExpression(expr.Value.StringTableKey, expr);
-                                    return $"EX_TextConst({type}, {stringTableAsset}, {stringTableId}, {stringTableKey})";
+                                    return $"TextConst({type}, {stringTableAsset}, {stringTableId}, {stringTableKey})";
                                 }
                             default:
                                 throw new NotImplementedException($"EX_TextConst TextLiteralType {expr.Value.TextLiteralType} not implemented");
@@ -583,20 +583,20 @@ namespace KismetScript.Decompiler
                 case EX_SoftObjectConst expr:
                     {
                         var val = FormatExpression(expr.Value, expr);
-                        return $"EX_SoftObjectConst({val})";
+                        return $"SoftObjectConst({val})";
                     }
                 case EX_NameConst expr:
                     {
                         var value = FormatString(expr.Value.ToString());
-                        return $"EX_NameConst({value})";
+                        return $"NameConst({value})";
                     }
                 case EX_RotationConst expr:
                     {
-                        return $"EX_RotationConst({expr.Value.Yaw}, {expr.Value.Pitch}, {expr.Value.Roll})";
+                        return $"RotationConst({expr.Value.Pitch}, {expr.Value.Yaw}, {expr.Value.Roll})";
                     }
                 case EX_VectorConst expr:
                     {
-                        return $"EX_VectorConst({expr.Value.X}, {expr.Value.Y}, {expr.Value.Z})";
+                        return $"VectorConst({expr.Value.X}, {expr.Value.Y}, {expr.Value.Z})";
                     }
                 case EX_TransformConst expr:
                     {
@@ -604,7 +604,7 @@ namespace KismetScript.Decompiler
                             $"{expr.Value.Rotation.X}, {expr.Value.Rotation.Y}, {expr.Value.Rotation.Z}, {expr.Value.Rotation.W}, " +
                             $"{expr.Value.Translation.X}, {expr.Value.Translation.Y}, {expr.Value.Translation.Z}, " +
                             $"{expr.Value.Scale3D.X}, {expr.Value.Scale3D.Y}, {expr.Value.Scale3D.Z}";
-                        return $"EX_TransformConst({@params})";
+                        return $"TransformConst({@params})";
                     }
                 case EX_StructConst expr:
                     {
@@ -612,11 +612,11 @@ namespace KismetScript.Decompiler
                         if (expr.Value?.Length > 0)
                         {
                             var members = string.Join(", ", expr.Value.Select(x => FormatExpression(x, expr)));
-                            return $"EX_StructConst({structName}, {expr.StructSize}, {members})";
+                            return $"StructConst({structName}, {expr.StructSize}, {members})";
                         }
                         else
                         {
-                            return $"EX_StructConst({structName}, {expr.StructSize})";
+                            return $"StructConst({structName}, {expr.StructSize})";
                         }
 
                     }
@@ -632,37 +632,37 @@ namespace KismetScript.Decompiler
                         var elements = string.Join(", ", expr.Elements.Select(x => FormatExpression(x, expr)));
                         if (!string.IsNullOrWhiteSpace(elements))
                         {
-                            return $"EX_ArrayConst({innerProperty}, {elements})";
+                            return $"ArrayConst({innerProperty}, {elements})";
                         }
                         else
                         {
-                            return $"EX_ArrayConst({innerProperty})";
+                            return $"ArrayConst({innerProperty})";
                         }
                     }
                 case EX_ByteConst expr:
                     return $"(byte)({expr.Value})";
                 case EX_IntConstByte expr:
-                    return $"EX_IntConstByte({expr.Value})";
+                    return $"IntConstByte({expr.Value})";
                 case EX_Int64Const expr:
-                    return $"EX_Int64Const({expr.Value})";
+                    return $"Int64Const({expr.Value})";
                 case EX_UInt64Const expr:
-                    return $"EX_UInt64Const({expr.Value})";
+                    return $"UInt64Const({expr.Value})";
                 case EX_FieldPathConst expr:
                     {
                         var value = FormatExpression(expr.Value, expr);
-                        return $"EX_FieldPathConst({value})";
+                        return $"FieldPathConst({value})";
                     }
                 case EX_MetaCast expr:
                     {
                         var classPtr = FormatString(_asset.GetName(expr.ClassPtr));
                         var target = FormatExpression(expr.TargetExpression, expr);
-                        return $"EX_MetaCast({classPtr}, {target})";
+                        return $"MetaCast({classPtr}, {target})";
                     }
                 case EX_DynamicCast expr:
                     {
                         var classPtr = FormatString(_asset.GetName(expr.ClassPtr));
                         var target = FormatExpression(expr.TargetExpression, expr);
-                        return $"EX_DynamicCast({classPtr}, {target})";
+                        return $"DynamicCast({classPtr}, {target})";
                     }
                 case EX_JumpIfNot expr:
                     {
@@ -674,33 +674,33 @@ namespace KismetScript.Decompiler
                     {
                         var debugMode = expr.DebugMode.ToString().ToLower();
                         var assertExpression = FormatExpression(expr.AssertExpression, expr);
-                        return $"EX_Assert({expr.LineNumber}, {debugMode}, {assertExpression})";
+                        return $"Assert({expr.LineNumber}, {debugMode}, {assertExpression})";
                     }
                 case EX_InstanceDelegate expr:
                     {
                         // TODO: validate context
                         var functionName = FormatString(expr.FunctionName.ToString());
-                        return $"EX_InstanceDelegate({functionName})";
+                        return $"InstanceDelegate({functionName})";
                     }
                 case EX_AddMulticastDelegate expr:
                     {
                         // TODO: validate context
                         var delegat = FormatExpression(expr.Delegate, expr);
                         var delegateToAdd = FormatExpression(expr.DelegateToAdd, expr);
-                        return $"EX_AddMulticastDelegate({delegat}, {delegateToAdd})";
+                        return $"AddMulticastDelegate({delegat}, {delegateToAdd})";
                     }
                 case EX_RemoveMulticastDelegate expr:
                     {
                         // TODO: validate context
                         var delegat = FormatExpression(expr.Delegate, expr);
                         var delegateToAdd = FormatExpression(expr.DelegateToAdd, expr);
-                        return $"EX_RemoveMulticastDelegate({delegat}, {delegateToAdd})";
+                        return $"RemoveMulticastDelegate({delegat}, {delegateToAdd})";
                     }
                 case EX_ClearMulticastDelegate expr:
                     {
                         // TODO: validate context
                         var delegateToClear = FormatExpression(expr.DelegateToClear, expr);
-                        return $"EX_ClearMulticastDelegate({delegateToClear})";
+                        return $"ClearMulticastDelegate({delegateToClear})";
                     }
                 case EX_BindDelegate expr:
                     {
@@ -708,27 +708,31 @@ namespace KismetScript.Decompiler
                         var name = FormatString(expr.FunctionName.ToString());
                         var delegat = FormatExpression(expr.Delegate, expr);
                         var objectTerm = FormatExpression(expr.ObjectTerm, expr);
-                        return $"EX_BindDelegate({name}, {delegat}, {objectTerm})";
+                        return $"BindDelegate({name}, {delegat}, {objectTerm})";
                     }
                 case EX_PushExecutionFlow expr:
                     {
-                        return $"EX_PushExecutionFlow({FormatCodeOffset(expr.PushingAddress)})";
+                        return $"PushExecutionFlow({FormatCodeOffset(expr.PushingAddress)})";
                     }
                 case EX_PopExecutionFlow expr:
                     {
-                        //return "break";
-                        return $"EX_PopExecutionFlow()";
+                        if (_insideExecutionFlow)
+                            return "break";
+                        return $"PopExecutionFlow()";
                     }
                 case EX_PopExecutionFlowIfNot expr:
                     {
-                        //var booleanExpression = FormatExpression(expr.BooleanExpression, expr);
-                        //return $"if (!({booleanExpression})) break";
-                        return $"EX_PopExecutionFlowIfNot({FormatExpression(expr.BooleanExpression, expr)})";
+                        if (_insideExecutionFlow)
+                        {
+                            var booleanExpression = FormatExpression(expr.BooleanExpression, expr);
+                            return $"if (!({booleanExpression})) break";
+                        }
+                        return $"PopExecutionFlowIfNot({FormatExpression(expr.BooleanExpression, expr)})";
                     }
                 case EX_Breakpoint expr:
-                    return $"EX_Breakpoint()";
+                    return $"Breakpoint()";
                 case EX_WireTracepoint expr:
-                    return $"EX_WireTracepoint()";
+                    return $"WireTracepoint()";
                 case EX_InstrumentationEvent expr:
                     {
                         var eventType = expr.EventType.ToString();
@@ -736,23 +740,23 @@ namespace KismetScript.Decompiler
                         if (expr.EventType == EScriptInstrumentationType.InlineEvent)
                         {
                             var eventName = FormatString(expr.EventName.ToString());
-                            return $"EX_InstrumentationEvent({eventType}, {eventName})";
+                            return $"InstrumentationEvent({eventType}, {eventName})";
                         }
                         else
                         {
-                            return $"EX_InstrumentationEvent({eventType})";
+                            return $"InstrumentationEvent({eventType})";
                         }
                     }
                 case EX_Tracepoint expr:
                     {
-                        return $"EX_Tracepoint()";
+                        return $"Tracepoint()";
                     }
                 case EX_SwitchValue expr:
                     {
                         var endGotoOffset = expr.EndGotoOffset;//FormatCodeOffset(expr.EndGotoOffset);
                         var indexTerm = FormatExpression(expr.IndexTerm, expr);
                         var defaultTerm = FormatExpression(expr.DefaultTerm, expr);
-                        var result = $"EX_SwitchValue({endGotoOffset}, {indexTerm}, {defaultTerm}";
+                        var result = $"SwitchValue({endGotoOffset}, {indexTerm}, {defaultTerm}";
                         foreach (var @case in expr.Cases)
                         {
                             var caseIndexValueTerm = FormatExpression(@case.CaseIndexValueTerm, expr);
@@ -766,11 +770,12 @@ namespace KismetScript.Decompiler
                     }
                 case EX_ArrayGetByRef expr:
                     {
-                        return $"EX_ArrayGetByRef({FormatExpression(expr.ArrayVariable, expr)}, {FormatExpression(expr.ArrayIndex, expr)})";
+                        return $"ArrayGetByRef({FormatExpression(expr.ArrayVariable, expr)}, {FormatExpression(expr.ArrayIndex, expr)})";
                     }
                 default:
                     throw new NotImplementedException($"Kismet instruction {kismetExpression.Inst} not implemented");
             }
         }
+
     }
 }

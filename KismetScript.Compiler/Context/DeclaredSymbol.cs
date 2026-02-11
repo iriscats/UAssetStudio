@@ -177,7 +177,7 @@ namespace KismetScript.Compiler.Compiler.Context
         }
 
         public override Symbol? GetSymbol(string name, SymbolCategory category)
-            => _members.SingleOrDefault(x => x.Name == name && (category == SymbolCategory.Any || x.SymbolCategory == category)) ?? BaseSymbol?.GetSymbol(name, category);
+            => _members.FirstOrDefault(x => x.Name == name && (category == SymbolCategory.Any || x.SymbolCategory == category)) ?? BaseSymbol?.GetSymbol(name, category);
 
         public override bool SymbolExists(string name, SymbolCategory category)
             => _members.Any(x => x.Name == name && (category == SymbolCategory.Any || x.SymbolCategory == category)) || (BaseSymbol?.SymbolExists(name, category) ?? false);
@@ -186,7 +186,7 @@ namespace KismetScript.Compiler.Compiler.Context
             => _members.Union(BaseSymbol ?? Enumerable.Empty<Symbol>()).Distinct().GetEnumerator();
 
         public override Symbol? GetSymbol(Declaration declaration)
-            => _members.SingleOrDefault(x => x.Declaration == declaration) ?? BaseSymbol?.GetSymbol(declaration);
+            => _members.FirstOrDefault(x => x.Declaration == declaration) ?? BaseSymbol?.GetSymbol(declaration);
     }
 
     public abstract class DeclaredSymbol<T> : Symbol where T : Declaration
@@ -350,7 +350,7 @@ namespace KismetScript.Compiler.Compiler.Context
             {
                 if (!symbolsByName.ContainsKey(name))
                     return null;
-                return symbolsByName[name].SingleOrDefault();
+                return symbolsByName[name].FirstOrDefault();
             }
             else
             {
@@ -365,7 +365,7 @@ namespace KismetScript.Compiler.Compiler.Context
             => symbolsByName.SelectMany(x => x.Value).GetEnumerator();
 
         public override Symbol? GetSymbol(Declaration declaration)
-            => symbolsByName.SelectMany(x => x.Value).Where(x => x.Declaration == declaration).SingleOrDefault();
+            => symbolsByName.SelectMany(x => x.Value).Where(x => x.Declaration == declaration).FirstOrDefault();
     }
 
     public class UnknownSymbol : Symbol

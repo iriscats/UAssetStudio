@@ -691,36 +691,22 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             if (variableContext.Initializer != null)
             {
                 var existingPropIndex = cdoExport.Data.FindIndex(p => p.Name.ToString() == variableContext.Symbol.Name);
-                // Construct full type hint including type parameter (e.g., "Struct<PointerToUberGraphFrame>")
+
+                // Skip property creation when it already exists - prevents NameMap bloat
+                if (existingPropIndex >= 0)
+                    continue;
+
+                // Construct full type hint including nested type parameters
+                // (e.g., "Array<Struct<GameActivitySubTask>>")
                 var typeDecl = variableContext.Symbol.Declaration?.Type;
-                var typeHint = typeDecl?.Text ?? "Object";
-                if (typeDecl?.TypeParameter != null)
-                {
-                    typeHint = $"{typeHint}<{typeDecl.TypeParameter.Text}>";
-                }
+                var typeHint = GetFullTypeHint(typeDecl);
                 var propData = CreatePropertyDataFromValue(
                     variableContext.Symbol.Name,
                     typeHint,
                     variableContext.Initializer);
 
                 if (propData != null)
-                {
-                    if (existingPropIndex >= 0)
-                    {
-                        var existingProp = cdoExport.Data[existingPropIndex];
-                        // Preserve text metadata (Namespace, CultureInvariantString) from original property
-                        // since the .kms format only captures the key, not the full text metadata
-                        if (existingProp is TextPropertyData existingText && propData is TextPropertyData newText)
-                        {
-                            newText.HistoryType = existingText.HistoryType;
-                            newText.Namespace ??= existingText.Namespace;
-                            newText.CultureInvariantString ??= existingText.CultureInvariantString;
-                        }
-                        cdoExport.Data[existingPropIndex] = propData;
-                    }
-                    else
-                        cdoExport.Data.Add(propData);
-                }
+                    cdoExport.Data.Add(propData);
             }
         }
     }
@@ -743,17 +729,22 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         // Initialize Data for new sub-objects (or reuse existing list)
         subObjectExport.Data ??= new List<PropertyData>();
 
+        // Track if this export already has data to avoid cross-contamination
+        bool hasExistingData = subObjectExport.Data.Count > 0;
+
         // Populate Data from compiled properties
         foreach (var prop in objectContext.Properties)
         {
             var existingPropIndex = subObjectExport.Data.FindIndex(p => p.Name.ToString() == prop.Name);
-            var propData = CreatePropertyDataFromValue(prop.Name, prop.Type, prop.Value);
 
-            if (propData != null)
+            // Skip property creation when it already exists - prevents NameMap bloat
+            if (existingPropIndex >= 0)
+                continue;
+
+            if (!hasExistingData)
             {
-                if (existingPropIndex >= 0)
-                    subObjectExport.Data[existingPropIndex] = propData;
-                else
+                var propData = CreatePropertyDataFromValue(prop.Name, prop.Type, prop.Value);
+                if (propData != null)
                     subObjectExport.Data.Add(propData);
             }
         }
@@ -775,31 +766,211 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         // Initialize Data (or reuse existing list)
         objectExport.Data ??= new List<PropertyData>();
 
+        // Track if this export already has data to avoid cross-contamination
+        // from same-named exports (e.g., multiple "ParticleLODLevel_1" in particle systems)
+        bool hasExistingData = objectExport.Data.Count > 0;
+
         // Populate Data from compiled properties
         foreach (var prop in objectContext.Properties)
         {
             var existingPropIndex = objectExport.Data.FindIndex(p => p.Name.ToString() == prop.Name);
-            var propData = CreatePropertyDataFromValue(prop.Name, prop.Type, prop.Value);
 
-            if (propData != null)
+            // Skip property creation entirely when the property already exists in the export.
+            // PreserveOriginalPropertyMetadata returns existingProp for same-type properties,
+            // but CreatePropertyDataFromValue has the side effect of adding names to the NameMap.
+            // By skipping creation, we prevent NameMap bloat from unused type/struct names.
+            if (existingPropIndex >= 0)
+                continue;
+
+            if (!hasExistingData)
             {
-                if (existingPropIndex >= 0)
-                    objectExport.Data[existingPropIndex] = propData;
-                else
+                var propData = CreatePropertyDataFromValue(prop.Name, prop.Type, prop.Value);
+                if (propData != null)
                     objectExport.Data.Add(propData);
             }
         }
     }
 
     /// <summary>
+    /// Preserves metadata from the original property when replacing it with a new one.
+    /// This handles cases where the KMS format doesn't capture all property metadata,
+    /// such as ByteType (FName vs Byte), NamePropertyData vs StrPropertyData,
+    /// TextPropertyData fields, Ancestry, and nested struct/array types.
+    /// </summary>
+    private PropertyData PreserveOriginalPropertyMetadata(PropertyData existingProp, PropertyData newProp)
+    {
+        // Preserve Ancestry and Name FName from the original property for correct serialization
+        newProp.Ancestry = existingProp.Ancestry;
+        newProp.Name = existingProp.Name; // Preserve original FName (with correct Number for numbered names)
+
+        // If the property types are fundamentally different (e.g., StructPropertyData vs ArrayPropertyData),
+        // the KMS round-trip has lost critical type information. Preserve the original property entirely.
+        if (existingProp.GetType() != newProp.GetType())
+        {
+            // Special cases where type conversion is expected and handled below
+            if (existingProp is NamePropertyData && newProp is StrPropertyData)
+            {
+                // Handled below - NamePropertyData/StrPropertyData conversion
+            }
+            else
+            {
+                return existingProp;
+            }
+        }
+
+        // ObjectPropertyData: when the original references an export (sub-object in the same asset)
+        // but the new one references an import, preserve the original reference since sub-object
+        // exports should be referenced directly.
+        if (existingProp is ObjectPropertyData existingObj && newProp is ObjectPropertyData newObj)
+        {
+            if (existingObj.Value.Index != newObj.Value.Index)
+            {
+                // Prefer the original reference - it has the correct export/import resolution
+                return existingObj;
+            }
+        }
+
+        // BytePropertyData: preserve EnumType and ByteType metadata from the original
+        if (existingProp is BytePropertyData existingByte)
+        {
+            if (existingByte.ByteType.ToString() == "FName")
+            {
+                // KMS can't represent FName-type byte properties; preserve the original entirely
+                return existingByte;
+            }
+            // For raw byte properties, preserve the EnumType (should be "None" for raw bytes)
+            if (newProp is BytePropertyData newByte)
+            {
+                newByte.EnumType = existingByte.EnumType;
+                newByte.ByteType = existingByte.ByteType;
+            }
+        }
+
+        // NamePropertyData: KMS decompiles as "Name" type but linker creates StrPropertyData;
+        // convert back to NamePropertyData to preserve the original type
+        if (existingProp is NamePropertyData existingName && newProp is StrPropertyData newStr)
+        {
+            // Preserve null Value when the original had null (decompiler outputs "" for null)
+            var newValue = newStr.Value?.ToString();
+            if (string.IsNullOrEmpty(newValue) && existingName.Value == null)
+            {
+                // Original had null Value, keep it null
+                return existingName;
+            }
+            existingName.Value = AddName(newValue ?? "None");
+            return existingName;
+        }
+
+        // StrPropertyData: preserve null Value when the original had null
+        // (decompiler outputs "" for null, compiler creates FString(""))
+        if (existingProp is StrPropertyData existingStr && newProp is StrPropertyData newStrProp)
+        {
+            if (existingStr.Value == null && (newStrProp.Value == null || string.IsNullOrEmpty(newStrProp.Value.ToString())))
+            {
+                newStrProp.Value = null;
+            }
+        }
+
+        // TextPropertyData: preserve metadata fields that the KMS format doesn't capture
+        if (existingProp is TextPropertyData existingText && newProp is TextPropertyData newText)
+        {
+            newText.Flags = existingText.Flags;
+            newText.HistoryType = existingText.HistoryType;
+            newText.Namespace ??= existingText.Namespace;
+            newText.CultureInvariantString ??= existingText.CultureInvariantString;
+            newText.TableId ??= existingText.TableId;
+        }
+
+        // StructPropertyData: merge new field values into existing struct to preserve
+        // field types (NamePropertyData, BytePropertyData FName, etc.) that KMS doesn't capture
+        if (existingProp is StructPropertyData existingStruct && newProp is StructPropertyData newStruct)
+        {
+            if (existingStruct.Value != null && newStruct.Value != null)
+            {
+                // For each field in the new struct, find and update the matching existing field
+                foreach (var newField in newStruct.Value)
+                {
+                    var existingFieldIndex = existingStruct.Value.FindIndex(p => p.Name.ToString() == newField.Name.ToString());
+                    if (existingFieldIndex >= 0)
+                    {
+                        var existingField = existingStruct.Value[existingFieldIndex];
+                        existingStruct.Value[existingFieldIndex] = PreserveOriginalPropertyMetadata(existingField, newField);
+                    }
+                    // Don't add new fields that weren't in the original struct.
+                    // This prevents cross-contamination from same-named exports.
+                }
+                return existingStruct;
+            }
+        }
+
+        // ArrayPropertyData: preserve existing array metadata and merge elements
+        if (existingProp is ArrayPropertyData existingArray && newProp is ArrayPropertyData newArray)
+        {
+            // Preserve the original ArrayType if the new one seems wrong
+            // (e.g., when type hint info was lost and defaulted to "ObjectProperty")
+            if (existingArray.ArrayType?.ToString() != newArray.ArrayType?.ToString())
+            {
+                newArray.ArrayType = existingArray.ArrayType;
+            }
+            // Preserve DummyStruct for empty struct arrays
+            if (existingArray.DummyStruct != null && newArray.DummyStruct == null)
+            {
+                newArray.DummyStruct = existingArray.DummyStruct;
+            }
+            // If the new array is empty but existing has data, preserve existing data.
+            // This handles cases where nested struct array contents were lost during KMS round-trip.
+            if ((newArray.Value == null || newArray.Value.Length == 0) &&
+                existingArray.Value != null && existingArray.Value.Length > 0)
+            {
+                newArray.Value = existingArray.Value;
+            }
+            // If both arrays have elements of same length, try to merge element metadata
+            else if (existingArray.Value != null && newArray.Value != null &&
+                existingArray.Value.Length == newArray.Value.Length)
+            {
+                for (int i = 0; i < newArray.Value.Length; i++)
+                {
+                    newArray.Value[i] = PreserveOriginalPropertyMetadata(existingArray.Value[i], newArray.Value[i]);
+                }
+            }
+        }
+
+        // For all remaining simple property types where the types match,
+        // prefer the original property to avoid format/precision loss in the round-trip.
+        // The KMS format may not faithfully represent float precision, null values,
+        // enum metadata, or other property-specific details.
+        if (existingProp.GetType() == newProp.GetType())
+        {
+            return existingProp;
+        }
+
+        return newProp;
+    }
+
+    /// <summary>
+    /// Recursively constructs a full type hint string from a TypeIdentifier chain.
+    /// e.g., Array -> Struct -> GameActivitySubTask becomes "Array<Struct<GameActivitySubTask>>"
+    /// </summary>
+    private static string GetFullTypeHint(KismetScript.Syntax.Statements.Expressions.Identifiers.TypeIdentifier? typeDecl)
+    {
+        if (typeDecl == null) return "Object";
+        var text = typeDecl.Text ?? "Object";
+        if (typeDecl.TypeParameter != null)
+        {
+            text = $"{text}<{GetFullTypeHint(typeDecl.TypeParameter)}>";
+        }
+        return text;
+    }
+
+    /// <summary>
     /// Creates a PropertyData instance from a compiled property value.
     /// </summary>
-    private PropertyData? CreatePropertyDataFromValue(string name, string typeHint, CompiledPropertyValue? value)
+    private PropertyData? CreatePropertyDataFromValue(string name, string typeHint, CompiledPropertyValue? value, FName? overrideName = null)
     {
         if (value == null)
             return null;
 
-        var fname = new FName(Package, name);
+        var fname = overrideName ?? AddName(name);
 
         if (value.FloatValue.HasValue)
         {
@@ -807,6 +978,11 @@ public partial class UAssetLinker : PackageLinker<UAsset>
         }
         if (value.IntValue.HasValue)
         {
+            // Distinguish between byte and int based on type hint from KMS
+            if (typeHint == "byte")
+            {
+                return new BytePropertyData(fname) { Value = (byte)value.IntValue.Value };
+            }
             return new IntPropertyData(fname) { Value = value.IntValue.Value };
         }
         if (value.BoolValue.HasValue)
@@ -823,14 +999,31 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             // Check if this is a SoftObject path string
             if (typeHint == "SoftObject")
             {
-                var assetPath = new FName(Package, value.StringValue);
-                var softPath = new FSoftObjectPath(null, assetPath, new FString(""));
+                var assetPath = AddName(value.StringValue);
+                var softPath = new FSoftObjectPath(null, assetPath, null);
                 return new SoftObjectPropertyData(fname) { Value = softPath };
             }
             return new StrPropertyData(fname) { Value = new FString(value.StringValue) };
         }
         if (value.ObjectReference != null)
         {
+            // Handle null object references (decompiled from FPackageIndex.IsNull())
+            if (value.ObjectReference == "null")
+            {
+                return new ObjectPropertyData(fname) { Value = new FPackageIndex(0) };
+            }
+
+            // Handle enum types: Enum<EnumTypeName> with value "EnumTypeName::Value"
+            if (typeHint.StartsWith("Enum<") && typeHint.EndsWith(">"))
+            {
+                var enumTypeName = typeHint.Substring(5, typeHint.Length - 6);
+                return new EnumPropertyData(fname)
+                {
+                    EnumType = AddName(enumTypeName),
+                    Value = AddName(value.ObjectReference)
+                };
+            }
+
             var results = GetPackageIndexByLocalName(value.ObjectReference);
             if (results == null || !results.Any())
             {
@@ -854,7 +1047,7 @@ public partial class UAssetLinker : PackageLinker<UAsset>
             var structTypeName = typeHint.Substring(7, typeHint.Length - 8);
             var structProp = new StructPropertyData(fname)
             {
-                StructType = new FName(Package, structTypeName),
+                StructType = AddName(structTypeName),
                 Value = new List<PropertyData>(),
                 SerializeNone = true,
             };
@@ -885,25 +1078,41 @@ public partial class UAssetLinker : PackageLinker<UAsset>
                 innerTypeHint = typeHint.Substring(6, typeHint.Length - 7);
             }
 
-            foreach (var element in value.ArrayValue)
+            // For struct array elements, use the parent array name (required for serialization).
+            // For other element types, use DefineDummy to avoid polluting the name map.
+            bool isStructArray = innerTypeHint.StartsWith("Struct<");
+
+            for (int i = 0; i < value.ArrayValue.Count; i++)
             {
-                // For array elements, we need to infer the element type
-                var elementProp = CreatePropertyDataFromValue("0", innerTypeHint, element);
+                var element = value.ArrayValue[i];
+                FName elementName;
+                if (isStructArray)
+                {
+                    // Struct array elements use the parent array's name (matches UAssetAPI serialization)
+                    elementName = AddName(name);
+                }
+                else
+                {
+                    elementName = FName.DefineDummy(Package, i.ToString(), int.MinValue);
+                }
+                var elementProp = CreatePropertyDataFromValue(i.ToString(), innerTypeHint, element, elementName);
                 if (elementProp != null)
                     elements.Add(elementProp);
             }
 
             arrayProp.Value = elements.ToArray();
 
-            // Determine array type from first element or type hint
-            if (elements.Any())
-            {
-                arrayProp.ArrayType = new FName(Package, elements[0].PropertyType.ToString());
-            }
-            else if (typeHint.StartsWith("Array<"))
+            // Determine array type: prefer type hint over first element's PropertyType
+            // This is critical because for Array<Struct<X>>, elements[0].PropertyType
+            // may be "ObjectProperty" (from struct fields) instead of "StructProperty"
+            if (typeHint.StartsWith("Array<") && typeHint.EndsWith(">"))
             {
                 var innerType = typeHint.Substring(6, typeHint.Length - 7);
-                arrayProp.ArrayType = new FName(Package, InferArrayTypeFromTypeHint(innerType));
+                arrayProp.ArrayType = AddName(InferArrayTypeFromTypeHint(innerType));
+            }
+            else if (elements.Any())
+            {
+                arrayProp.ArrayType = AddName(elements[0].PropertyType.ToString());
             }
 
             return arrayProp;
@@ -1046,7 +1255,133 @@ public partial class UAssetLinker : PackageLinker<UAsset>
 
     public override UAsset Build()
     {
+        // Ensure all property type names used in export data are in the name map
+        // before serialization time (when AddNameReference is locked).
+        // This is necessary because the linker may create new PropertyData instances
+        // whose type names (e.g., "StrProperty", "IntProperty") are not in the
+        // original asset's name map.
+        if (!Package.HasUnversionedProperties)
+        {
+            EnsurePropertyTypeNamesInNameMap();
+        }
         return Package;
+    }
+
+    /// <summary>
+    /// Walks all exports and their property data recursively to ensure that all
+    /// property type names, array types, struct types, and "None" sentinels
+    /// are pre-registered in the name map before serialization.
+    /// </summary>
+    private void EnsurePropertyTypeNamesInNameMap()
+    {
+        // Always ensure "None" is in the name map (used as property list terminator)
+        EnsureNameInMap("None");
+
+        foreach (var export in Package.Exports)
+        {
+            if (export is NormalExport normalExport && normalExport.Data != null)
+            {
+                EnsurePropertyNamesRecursive(normalExport.Data);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Recursively ensures all property-related names are in the name map.
+    /// </summary>
+    private void EnsurePropertyNamesRecursive(IEnumerable<PropertyData> properties)
+    {
+        foreach (var prop in properties)
+        {
+            // Ensure the property type name (e.g., "StrProperty", "IntProperty") is in the name map
+            if (prop.PropertyType?.Value != null)
+            {
+                EnsureNameInMap(prop.PropertyType.Value);
+            }
+
+            // Ensure the property name is in the name map (skip dummy names used by array elements)
+            if (prop.Name?.Value?.Value != null && prop.Name.Number != int.MinValue)
+            {
+                EnsureNameInMap(prop.Name.Value.Value);
+            }
+
+            // Handle nested properties
+            if (prop is StructPropertyData structProp)
+            {
+                // Ensure StructType is in the name map (skip dummy FNames used by MapPropertyData for struct entries)
+                if (structProp.StructType?.Value?.Value != null && !structProp.StructType.IsDummy)
+                {
+                    EnsureNameInMap(structProp.StructType.Value.Value);
+                }
+                if (structProp.Value != null)
+                {
+                    EnsurePropertyNamesRecursive(structProp.Value);
+                }
+            }
+            else if (prop is ArrayPropertyData arrayProp)
+            {
+                // Ensure ArrayType is in the name map
+                if (arrayProp.ArrayType?.Value?.Value != null)
+                {
+                    EnsureNameInMap(arrayProp.ArrayType.Value.Value);
+                }
+                // Also ensure "StructProperty" is registered if array contains structs
+                if (arrayProp.ArrayType?.Value?.Value == "StructProperty")
+                {
+                    EnsureNameInMap("StructProperty");
+                }
+                if (arrayProp.Value != null)
+                {
+                    EnsurePropertyNamesRecursive(arrayProp.Value);
+                }
+            }
+            else if (prop is MapPropertyData mapProp)
+            {
+                if (mapProp.Value != null)
+                {
+                    if (mapProp.Value.Keys.Count > 0)
+                    {
+                        var firstKey = mapProp.Value.Keys.First();
+                        if (firstKey.PropertyType?.Value != null)
+                            EnsureNameInMap(firstKey.PropertyType.Value);
+                    }
+                    if (mapProp.Value.Count > 0)
+                    {
+                        var firstValue = mapProp.Value.Values.First();
+                        if (firstValue.PropertyType?.Value != null)
+                            EnsureNameInMap(firstValue.PropertyType.Value);
+                    }
+                    EnsurePropertyNamesRecursive(mapProp.Value.Keys);
+                    EnsurePropertyNamesRecursive(mapProp.Value.Values);
+                }
+            }
+            else if (prop is SetPropertyData setProp)
+            {
+                if (setProp.Value != null)
+                {
+                    EnsurePropertyNamesRecursive(setProp.Value);
+                }
+            }
+            else if (prop is EnumPropertyData enumProp)
+            {
+                if (enumProp.EnumType?.Value?.Value != null)
+                    EnsureNameInMap(enumProp.EnumType.Value.Value);
+                if (enumProp.Value?.Value?.Value != null)
+                    EnsureNameInMap(enumProp.Value.Value.Value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Ensures a name string exists in the package's name map.
+    /// </summary>
+    private void EnsureNameInMap(string name)
+    {
+        var fstring = new FString(name);
+        if (!Package.ContainsNameReference(fstring))
+        {
+            Package.AddNameReference(fstring);
+        }
     }
 
     /// <summary>

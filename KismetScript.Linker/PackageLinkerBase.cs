@@ -29,12 +29,29 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     }
 
     // Dictionary to preserve original field path metadata from existing bytecode
-    // Maps property name -> original path segments/resolved owner
-    private Dictionary<(PropertyPointerKind Kind, string PropertyName), PreservedFieldPath> _originalPropertyFieldPaths = new();
+    // Maps property name -> queue of original path segments/resolved owner (supports multiple same-named properties)
+    private Dictionary<(PropertyPointerKind Kind, string PropertyName), Queue<PreservedFieldPath>> _originalPropertyFieldPaths = new();
 
     // Set of variable names whose property pointers had empty Path/owner in the original bytecode
     // (e.g. certain K2Node temporaries used as EX_Let Value pointers)
     private HashSet<string> _k2NodeVariablesWithEmptyPath = new();
+
+    // Dictionary to preserve original function call info from existing bytecode.
+    // Keyed by function name -> queue of preserved function call data (supports multiple calls to same function).
+    private record PreservedFunctionCall(Type ExprType, FPackageIndex? StackNode, FName? VirtualFunctionName, int? UbergraphOffset);
+    private Dictionary<string, Queue<PreservedFunctionCall>> _originalFunctionCalls = new();
+
+    // Pending expression replacements (old -> new) to apply after the Flatten() fixup loop
+    private Dictionary<KismetExpression, KismetExpression> _pendingExprReplacements = new();
+
+    // Queues to preserve original bytecode offset values (PushingAddress, CodeOffset, etc.)
+    // These are restored after expression type replacements to maintain correct byte offsets.
+    private Queue<uint> _preservedPushingAddresses = new();
+    private Queue<uint> _preservedJumpOffsets = new();
+    private Queue<uint> _preservedJumpIfNotOffsets = new();
+    private Queue<uint> _preservedSkipOffsets = new();
+    private Queue<uint> _preservedSwitchEndGotoOffsets = new();
+    private Queue<(uint NextOffset, int CaseCount)> _preservedSwitchCaseOffsets = new();
 
     protected PackageLinker()
     {
@@ -852,8 +869,10 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 var propertyName = iProperty.Symbol.Name;
 
                 // Reuse preserved path metadata when available to match the original asset exactly.
-                if (_originalPropertyFieldPaths.TryGetValue((kind, propertyName), out var preservedFieldPath))
+                // Uses a queue to support multiple occurrences of the same property name with different owners.
+                if (_originalPropertyFieldPaths.TryGetValue((kind, propertyName), out var preservedQueue) && preservedQueue.Count > 0)
                 {
+                    var preservedFieldPath = preservedQueue.Dequeue();
                     Console.WriteLine($"[FixPropertyPointer] '{propertyName}' using preserved path");
                     pointer = new KismetPropertyPointer()
                     {
@@ -1183,8 +1202,51 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     break;
 
                 case EX_VirtualFunction expr:
-                    FixName(ref expr.VirtualFunctionName);
-                    break;
+                    {
+                        // Check if the original was a FinalFunction (type mismatch from compiler)
+                        // Get function name safely - IntermediateName doesn't support ToString()
+                        string? vfName = null;
+                        if (expr.VirtualFunctionName is IntermediateName iVfName)
+                            vfName = iVfName.TextValue;
+                        else if (expr.VirtualFunctionName != null)
+                        {
+                            try { vfName = expr.VirtualFunctionName.ToString(); } catch { }
+                        }
+                        if (vfName != null && _originalFunctionCalls.TryGetValue(vfName, out var vfQueue) && vfQueue.Count > 0)
+                        {
+                            var preserved = vfQueue.Peek();
+                            if (preserved.StackNode != null &&
+                                (preserved.ExprType == typeof(EX_FinalFunction) ||
+                                 preserved.ExprType.IsSubclassOf(typeof(EX_FinalFunction))))
+                            {
+                                // Mark for post-processing type conversion (can't change type in-place)
+                                vfQueue.Dequeue();
+                                var replacement = new EX_FinalFunction()
+                                {
+                                    StackNode = preserved.StackNode,
+                                    Parameters = expr.Parameters
+                                };
+                                // Restore ubergraph entry point offset if preserved
+                                if (preserved.UbergraphOffset.HasValue &&
+                                    replacement.Parameters.Length == 1 && replacement.Parameters[0] is EX_IntConst intParam2)
+                                {
+                                    intParam2.Value = preserved.UbergraphOffset.Value;
+                                }
+                                _pendingExprReplacements[expr] = replacement;
+                                break;
+                            }
+                            else if (preserved.VirtualFunctionName != null)
+                            {
+                                // Same type, just use preserved name
+                                vfQueue.Dequeue();
+                                expr.VirtualFunctionName = preserved.VirtualFunctionName;
+                                break;
+                            }
+                        }
+                        if (expr.VirtualFunctionName != null)
+                            FixName(ref expr.VirtualFunctionName);
+                        break;
+                    }
 
                 case EX_CrossInterfaceCast expr:
                     FixPackageIndex(ref expr.ClassPtr);
@@ -1195,6 +1257,27 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     break;
 
                 case EX_FinalFunction expr:
+                    // Try to reuse preserved original StackNode to maintain correct import/export references
+                    if (expr.StackNode is IntermediatePackageIndex iStackNode)
+                    {
+                        var funcName = iStackNode.Symbol.Name;
+                        if (_originalFunctionCalls.TryGetValue(funcName, out var stackQueue) && stackQueue.Count > 0)
+                        {
+                            var preserved = stackQueue.Peek();
+                            if (preserved.StackNode != null)
+                            {
+                                stackQueue.Dequeue();
+                                expr.StackNode = preserved.StackNode;
+                                // Restore ubergraph entry point offset if preserved
+                                if (preserved.UbergraphOffset.HasValue &&
+                                    expr.Parameters.Length == 1 && expr.Parameters[0] is EX_IntConst intParam)
+                                {
+                                    intParam.Value = preserved.UbergraphOffset.Value;
+                                }
+                                break;
+                            }
+                        }
+                    }
                     FixPackageIndex(ref expr.StackNode);
                     break;
 
@@ -1293,7 +1376,121 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 intermediateCount++;
         }
         Console.WriteLine($"[GetFixedBytecode] total={totalCount}, intermediate={intermediateCount}");
+
+        // Apply any pending expression type replacements (e.g., VirtualFunction -> FinalFunction)
+        if (_pendingExprReplacements.Count > 0)
+        {
+            ApplyExpressionReplacements(bytecode);
+            _pendingExprReplacements.Clear();
+        }
+
+        // Restore preserved bytecode offset values after all fixups.
+        // This is needed because expression type replacements may change serialized sizes,
+        // invalidating offsets that were calculated during compilation.
+        foreach (var fixedExpr in bytecode.Flatten())
+        {
+            switch (fixedExpr)
+            {
+                case EX_PushExecutionFlow push when _preservedPushingAddresses.Count > 0:
+                    push.PushingAddress = _preservedPushingAddresses.Dequeue();
+                    break;
+                case EX_Jump jump when _preservedJumpOffsets.Count > 0:
+                    jump.CodeOffset = _preservedJumpOffsets.Dequeue();
+                    break;
+                case EX_JumpIfNot jumpIfNot when _preservedJumpIfNotOffsets.Count > 0:
+                    jumpIfNot.CodeOffset = _preservedJumpIfNotOffsets.Dequeue();
+                    break;
+                case EX_Skip skip when _preservedSkipOffsets.Count > 0:
+                    skip.CodeOffset = _preservedSkipOffsets.Dequeue();
+                    break;
+                case EX_SwitchValue sv when _preservedSwitchEndGotoOffsets.Count > 0:
+                    sv.EndGotoOffset = _preservedSwitchEndGotoOffsets.Dequeue();
+                    break;
+            }
+        }
+
         return bytecode;
+    }
+
+    /// <summary>
+    /// Recursively walks the bytecode tree and replaces expressions marked in _pendingExprReplacements.
+    /// </summary>
+    private void ApplyExpressionReplacements(KismetExpression[] expressions)
+    {
+        for (int i = 0; i < expressions.Length; i++)
+        {
+            if (_pendingExprReplacements.TryGetValue(expressions[i], out var replacement))
+            {
+                expressions[i] = replacement;
+            }
+            ApplyExpressionReplacementsInChildren(expressions[i]);
+        }
+    }
+
+    private void ApplyExpressionReplacementsInChildren(KismetExpression expr)
+    {
+        // Handle expression types that contain sub-expression arrays
+        switch (expr)
+        {
+            case EX_FinalFunction ff:
+                ApplyExpressionReplacements(ff.Parameters);
+                break;
+            case EX_VirtualFunction vf:
+                ApplyExpressionReplacements(vf.Parameters);
+                break;
+            case EX_Context ctx:
+                ReplaceIfNeeded(ref ctx.ObjectExpression);
+                ReplaceIfNeeded(ref ctx.ContextExpression);
+                break;
+            // EX_Context_FailSilent extends EX_Context, already handled above
+            case EX_Let let:
+                ReplaceIfNeeded(ref let.Expression);
+                break;
+            case EX_LetObj letObj:
+                ReplaceIfNeeded(ref letObj.AssignmentExpression);
+                break;
+            case EX_LetBool letBool:
+                ReplaceIfNeeded(ref letBool.AssignmentExpression);
+                break;
+            case EX_LetWeakObjPtr letWeak:
+                ReplaceIfNeeded(ref letWeak.AssignmentExpression);
+                break;
+            case EX_LetDelegate letDel:
+                ReplaceIfNeeded(ref letDel.AssignmentExpression);
+                break;
+            case EX_LetMulticastDelegate letMcDel:
+                ReplaceIfNeeded(ref letMcDel.AssignmentExpression);
+                break;
+            case EX_Return ret:
+                ReplaceIfNeeded(ref ret.ReturnExpression);
+                break;
+            case EX_SwitchValue sv:
+                ReplaceIfNeeded(ref sv.IndexTerm);
+                ReplaceIfNeeded(ref sv.DefaultTerm);
+                if (sv.Cases != null)
+                {
+                    for (int ci = 0; ci < sv.Cases.Length; ci++)
+                    {
+                        var caseItem = sv.Cases[ci];
+                        ReplaceIfNeeded(ref caseItem.CaseIndexValueTerm);
+                        ReplaceIfNeeded(ref caseItem.CaseTerm);
+                        sv.Cases[ci] = caseItem;
+                    }
+                }
+                break;
+        }
+
+        void ReplaceIfNeeded(ref KismetExpression subExpr)
+        {
+            if (subExpr != null && _pendingExprReplacements.TryGetValue(subExpr, out var repl))
+            {
+                subExpr = repl;
+            }
+            if (subExpr != null)
+            {
+                ApplyExpressionReplacementsInChildren(subExpr);
+            }
+        }
     }
 
     protected FunctionExport CreateFunctionExport(CompiledFunctionContext context)
@@ -1598,6 +1795,14 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     {
         _originalPropertyFieldPaths.Clear();
         _k2NodeVariablesWithEmptyPath.Clear();
+        _originalFunctionCalls.Clear();
+        _pendingExprReplacements.Clear();
+        _preservedPushingAddresses.Clear();
+        _preservedJumpOffsets.Clear();
+        _preservedJumpIfNotOffsets.Clear();
+        _preservedSkipOffsets.Clear();
+        _preservedSwitchEndGotoOffsets.Clear();
+        _preservedSwitchCaseOffsets.Clear();
     }
 
     /// <summary>
@@ -1669,18 +1874,83 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 var propertyName = mapConstValue.ValueProperty.New.Path[0].ToString();
                 TryPreserveFieldPath(propertyName, mapConstValue.ValueProperty.New, PropertyPointerKind.Default);
             }
+
+            // Preserve function call expression types and StackNode/VirtualFunctionName from original bytecode.
+            // This handles EX_FinalFunction (and subclasses), EX_VirtualFunction (and subclasses).
+            if (expr is EX_FinalFunction finalFunc && finalFunc.StackNode != null && !finalFunc.StackNode.IsNull())
+            {
+                string? funcName = null;
+                if (finalFunc.StackNode.IsImport())
+                    funcName = finalFunc.StackNode.ToImport(Package)?.ObjectName?.ToString();
+                else if (finalFunc.StackNode.IsExport())
+                    funcName = finalFunc.StackNode.ToExport(Package)?.ObjectName?.ToString();
+
+                // Detect ubergraph entry point calls and preserve the offset
+                int? ubergraphOffset = null;
+                if (finalFunc.StackNode.IsExport())
+                {
+                    var targetExport = finalFunc.StackNode.ToExport(Package);
+                    if (targetExport is FunctionExport funcExport && funcExport.IsUbergraphFunction() &&
+                        finalFunc.Parameters.Length == 1 && finalFunc.Parameters[0] is EX_IntConst intConst)
+                    {
+                        ubergraphOffset = intConst.Value;
+                    }
+                }
+
+                if (funcName != null)
+                    EnqueueFunctionCall(funcName, new PreservedFunctionCall(expr.GetType(), finalFunc.StackNode, null, ubergraphOffset));
+            }
+            else if (expr is EX_VirtualFunction virtualFunc)
+            {
+                var funcName = virtualFunc.VirtualFunctionName?.ToString();
+                if (funcName != null)
+                    EnqueueFunctionCall(funcName, new PreservedFunctionCall(expr.GetType(), null, virtualFunc.VirtualFunctionName, null));
+            }
+
+            // Preserve bytecode offset values for restoration after expression type replacements
+            switch (expr)
+            {
+                case EX_PushExecutionFlow push:
+                    _preservedPushingAddresses.Enqueue(push.PushingAddress);
+                    break;
+                case EX_Jump jump:
+                    _preservedJumpOffsets.Enqueue(jump.CodeOffset);
+                    break;
+                case EX_JumpIfNot jumpIfNot:
+                    _preservedJumpIfNotOffsets.Enqueue(jumpIfNot.CodeOffset);
+                    break;
+                case EX_Skip skip:
+                    _preservedSkipOffsets.Enqueue(skip.CodeOffset);
+                    break;
+                case EX_SwitchValue sv:
+                    _preservedSwitchEndGotoOffsets.Enqueue(sv.EndGotoOffset);
+                    break;
+            }
         }
+    }
+
+    private void EnqueueFunctionCall(string funcName, PreservedFunctionCall call)
+    {
+        if (!_originalFunctionCalls.TryGetValue(funcName, out var queue))
+        {
+            queue = new Queue<PreservedFunctionCall>();
+            _originalFunctionCalls[funcName] = queue;
+        }
+        queue.Enqueue(call);
     }
 
     private void TryPreserveFieldPath(string propertyName, FFieldPath fieldPath, PropertyPointerKind kind)
     {
-        if (_originalPropertyFieldPaths.ContainsKey((kind, propertyName)))
-        {
-            return;
-        }
-
+        var key = (kind, propertyName);
         var pathSegments = fieldPath.Path.Select(name => name.ToString()).ToArray();
-        _originalPropertyFieldPaths[(kind, propertyName)] = new PreservedFieldPath(pathSegments, fieldPath.ResolvedOwner);
+        var preservedPath = new PreservedFieldPath(pathSegments, fieldPath.ResolvedOwner);
+
+        if (!_originalPropertyFieldPaths.TryGetValue(key, out var queue))
+        {
+            queue = new Queue<PreservedFieldPath>();
+            _originalPropertyFieldPaths[key] = queue;
+        }
+        queue.Enqueue(preservedPath);
     }
 
     protected abstract FPackageIndex EnsurePackageImported(string objectName, bool bImportOptional = false);

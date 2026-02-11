@@ -37,6 +37,7 @@ public partial class KismetDecompiler
     
     private bool _useFullPropertyNames = false;
     private bool _useFullFunctionNames = false;
+    private bool _insideExecutionFlow = false;
     private FunctionState _functionState = default!;
     
     private readonly IndentedWriter _writer;
@@ -412,11 +413,12 @@ public partial class KismetDecompiler
     }
 
     /// <summary>
-    /// Format a float value with proper suffix.
+    /// Format a float value with proper suffix using round-trip format for exact precision.
     /// </summary>
     private string FormatFloat(float value)
     {
-        var str = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        // Use "R" (round-trip) format to preserve exact binary representation
+        var str = value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
         // Ensure there's a decimal point or 'E' so it's recognized as float
         if (!str.Contains('.') && !str.Contains('E') && !str.Contains('e'))
         {
@@ -913,7 +915,10 @@ public partial class KismetDecompiler
 
                     _writer.WriteLine($"while (true) {{");
                     _writer.Push();
+                    var savedInsideExecutionFlow = _insideExecutionFlow;
+                    _insideExecutionFlow = true;
                     WriteBlock(whileBlock);
+                    _insideExecutionFlow = savedInsideExecutionFlow;
                     _writer.Pop();
                     _writer.WriteLine($"}}");
                     _writer.WriteLine();
@@ -1327,14 +1332,26 @@ public partial class KismetDecompiler
 
     private string FormatCodeOffset(uint codeOffset, string? functionName = null, string? callingFunctionName = null)
     {
+        var resolvedFunctionName = functionName ?? _function.ObjectName.ToString();
+        var currentFunctionName = _function.ObjectName.ToString();
+        
         if (callingFunctionName != null &&
-            callingFunctionName != functionName)
+            callingFunctionName != resolvedFunctionName)
         {
-            return FormatIdentifier($"{(functionName ?? _function.ObjectName.ToString())}_{codeOffset}_{callingFunctionName}");
+            // Cross-function entry point: use calling function name as meaningful label
+            // e.g., "SetPetActive_788" instead of "ExecuteUbergraph_BP_PetComponent_788_SetPetActive"
+            return FormatIdentifier($"{callingFunctionName}_{codeOffset}");
+        }
+        else if (resolvedFunctionName == currentFunctionName)
+        {
+            // Internal label within current function: use short format
+            // e.g., "L_788" instead of "ExecuteUbergraph_BP_PetComponent_788"
+            return FormatIdentifier($"L_{codeOffset}");
         }
         else
         {
-            return FormatIdentifier($"{(functionName ?? _function.ObjectName.ToString())}_{codeOffset}");
+            // Cross-function reference: keep full function name for clarity
+            return FormatIdentifier($"{resolvedFunctionName}_{codeOffset}");
         }
     }
 
