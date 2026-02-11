@@ -1,14 +1,26 @@
 using System.Text;
+using KismetScript.Syntax.Statements.Expressions.Literals;
 
 namespace KismetScript.Syntax.Statements.Expressions;
 
 /// <summary>
 /// Represents a key-value pair in an object literal expression.
+/// Key can be an Identifier, StringLiteral, or nested ObjectLiteral (for map struct keys).
 /// </summary>
 public class ObjectLiteralEntry
 {
-    public Identifier Key { get; set; } = null!;
+    public Expression Key { get; set; } = null!;
     public Expression Value { get; set; } = null!;
+
+    /// <summary>
+    /// Gets the string representation of the key for dictionary lookups.
+    /// </summary>
+    public string KeyText => Key switch
+    {
+        Identifier id => id.Text,
+        StringLiteral str => str.Value,
+        _ => Key.ToString() ?? ""
+    };
 }
 
 /// <summary>

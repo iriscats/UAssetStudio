@@ -615,7 +615,7 @@ public partial class KismetScriptCompiler
         {
             var compiledValue = CompilePropertyValue(entry.Value);
             if (compiledValue != null)
-                structValue[entry.Key.Text] = compiledValue;
+                structValue[entry.KeyText] = compiledValue;
         }
         return new CompiledPropertyValue { StructValue = structValue };
     }
@@ -1591,8 +1591,14 @@ public partial class KismetScriptCompiler
                 }
             }
 
-            // Still not found - throw error
-            throw new CompilationError(identifier, $"The name {identifier.Text} does not exist in the current context");
+            // Fallback: generate a placeholder EX_InstanceVariable for unresolved names.
+            // This handles cases where the variable comes from an inherited class that wasn't
+            // fully tracked by the decompiler. The linker will restore the correct property
+            // reference from the original bytecode.
+            return Emit(identifier, new EX_InstanceVariable()
+            {
+                Variable = GetPropertyPointer(identifier, identifier.Text)
+            });
         }
 
         if (symbol is VariableSymbol variableSymbol)

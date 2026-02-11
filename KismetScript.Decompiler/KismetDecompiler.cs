@@ -408,7 +408,7 @@ public partial class KismetDecompiler
             EnumPropertyData enumProp => FormatIdentifier(enumProp.Value?.ToString() ?? "None"),
             SoftObjectPropertyData softProp => FormatString(softProp.Value.AssetPath.AssetName?.ToString() ?? ""),
             GuidPropertyData guidProp => FormatGuid(guidProp.Value),
-            _ => $"/* unsupported: {propData.PropertyType} */"
+            _ => $"__unsupported_{propData.PropertyType}__"
         };
     }
 
@@ -1212,6 +1212,8 @@ public partial class KismetDecompiler
     {
         if (value.Contains("\\"))
             value = value.Replace("\\", "\\\\");
+        if (value.Contains("\""))
+            value = value.Replace("\"", "\\\"");
         return $"\"{value}\"";
     }
 

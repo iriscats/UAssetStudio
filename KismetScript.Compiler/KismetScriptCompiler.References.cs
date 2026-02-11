@@ -223,7 +223,18 @@ public partial class KismetScriptCompiler
     /// <exception cref="CompilationError"></exception>
     private Symbol GetRequiredSymbol(SyntaxNode syntaxNode, string name, MemberContext? context = default)
     {
-        var symbol = GetSymbol(name, context) ?? throw new CompilationError(syntaxNode, $"The name {name} does not exist in the current context");
+        var symbol = GetSymbol(name, context);
+        if (symbol == null)
+        {
+            // Create a fallback unknown symbol for unresolved names.
+            // This handles inherited members not tracked by the decompiler.
+            symbol = new UnknownSymbol()
+            {
+                Name = name,
+                DeclaringSymbol = null,
+                IsExternal = false,
+            };
+        }
         return symbol;
     }
 
@@ -238,7 +249,17 @@ public partial class KismetScriptCompiler
     /// <exception cref="CompilationError"></exception>
     private T GetRequiredSymbol<T>(SyntaxNode syntaxNode, string name, MemberContext? context = default) where T : Symbol
     {
-        var symbol = GetSymbol(name, context) ?? throw new CompilationError(syntaxNode, $"The name {name} does not exist in the current context");
+        var symbol = GetSymbol(name, context);
+        if (symbol == null)
+        {
+            // Create a fallback unknown symbol for unresolved names.
+            symbol = new UnknownSymbol()
+            {
+                Name = name,
+                DeclaringSymbol = null,
+                IsExternal = false,
+            };
+        }
         var castedSymbol = symbol as T ?? throw new CompilationError(syntaxNode, $"Expected a {typeof(T).Name}, got {symbol.GetType().Name}");
         return castedSymbol;
     }

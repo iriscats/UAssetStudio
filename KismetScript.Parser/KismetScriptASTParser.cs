@@ -714,6 +714,50 @@ public class KismetScriptASTParser
         return true;
     }
 
+    /// <summary>
+    /// Parses an object key from an objectKey grammar rule context.
+    /// Keys can be Identifiers, StringLiterals, or nested object literals (for struct map keys).
+    /// </summary>
+    private bool TryParseObjectKey(KismetScriptParser.ObjectKeyContext context, out Expression keyExpr)
+    {
+        keyExpr = null!;
+        if (context.Identifier() != null)
+        {
+            if (!TryParseIdentifier(context.Identifier(), out var identifier))
+                return false;
+            keyExpr = identifier;
+        }
+        else if (context.StringLiteral() != null)
+        {
+            var strLit = CreateAstNode<StringLiteral>(context.StringLiteral());
+            var text = context.StringLiteral().GetText();
+            // Remove surrounding quotes
+            strLit.Value = text.Length >= 2 ? text[1..^1] : text;
+            keyExpr = strLit;
+        }
+        else if (context.constant() != null)
+        {
+            // Numeric/bool literal as map key (e.g., 1u, 0, 3.14f)
+            if (!TryParseLiteral(context.constant(), out keyExpr))
+                return false;
+        }
+        else
+        {
+            // Nested object literal as map key (e.g., { UserParameterRedirects: {} })
+            var nestedLiteral = CreateAstNode<ObjectLiteral>(context);
+            foreach (var kvpContext in context.objectKeyValuePair())
+            {
+                if (!TryParseExpression(kvpContext.expression(), out var valueExpr))
+                    return false;
+                if (!TryParseObjectKey(kvpContext.objectKey(), out var nestedKey))
+                    return false;
+                nestedLiteral.Entries.Add(new ObjectLiteralEntry { Key = nestedKey, Value = valueExpr });
+            }
+            keyExpr = nestedLiteral;
+        }
+        return true;
+    }
+
     private bool TryParseVariableDeclaration(KismetScriptParser.VariableDeclarationStatementContext context, out VariableDeclaration variableDeclaration)
     {
         LogTrace("Parsing variable declaration");
@@ -933,20 +977,20 @@ public class KismetScriptASTParser
         else if (TryCast<KismetScriptParser.ObjectLiteralExpressionContext>(context, out var objectLiteralContext))
         {
             var objectLiteral = CreateAstNode<ObjectLiteral>(objectLiteralContext);
-            var identifiers = objectLiteralContext.Identifier();
-            var expressions = objectLiteralContext.expression();
-
-            for (int i = 0; i < identifiers.Length; i++)
+            foreach (var kvpContext in objectLiteralContext.objectKeyValuePair())
             {
-                if (!TryParseExpression(expressions[i], out var valueExpr))
+                if (!TryParseExpression(kvpContext.expression(), out var valueExpr))
+                    return false;
+
+                Expression keyExpr;
+                if (!TryParseObjectKey(kvpContext.objectKey(), out keyExpr))
                     return false;
 
                 var entry = new ObjectLiteralEntry
                 {
-                    Key = CreateAstNode<Identifier>(identifiers[i]),
+                    Key = keyExpr,
                     Value = valueExpr
                 };
-                entry.Key.Text = identifiers[i].GetText();
                 objectLiteral.Entries.Add(entry);
             }
 
@@ -2089,7 +2133,26 @@ public class KismetScriptASTParser
     private bool TryParseStringLiteral(ITerminalNode node, out StringLiteral literal)
     {
         literal = CreateAstNode<StringLiteral>(node);
-        literal.Value = node.Symbol.Text.Trim('\"');
+        var text = node.Symbol.Text;
+        // Remove surrounding quotes
+        text = text.Length >= 2 ? text[1..^1] : text;
+        // Unescape sequences (process character by character for correctness)
+        var sb = new System.Text.StringBuilder(text.Length);
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\\' && i + 1 < text.Length)
+            {
+                char next = text[i + 1];
+                if (next == '\\' || next == '"' || next == 'n' || next == 'r' || next == 't')
+                {
+                    sb.Append(next switch { 'n' => '\n', 'r' => '\r', 't' => '\t', _ => next });
+                    i++; // skip the escaped character
+                    continue;
+                }
+            }
+            sb.Append(text[i]);
+        }
+        literal.Value = sb.ToString();
 
         return true;
     }

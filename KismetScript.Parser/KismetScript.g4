@@ -146,7 +146,7 @@ expression
 	: Semicolon																# nullExpression
 	| '(' expression ')'													# compoundExpression
 	| '{' (expression)? (',' expression)* (',')? '}'						# braceInitializerListExpression
-	| '{' (Identifier ':' expression)? (',' Identifier ':' expression)* (',')? '}'	# objectLiteralExpression
+	| '{' objectKeyValuePair (',' objectKeyValuePair)* ','? '}'			# objectLiteralExpression
 	| '[' (expression)? (',' expression)* (',')? ']'						# bracketInitializerListExpression
 	| New typeIdentifier? arraySignifier? '{' (expression)? (',' expression)* (',')? '}' # newExpression
 	| Identifier '[' expression ']'											# subscriptExpression
@@ -183,6 +183,18 @@ constant
 	| FloatLiteral
 	| StringLiteral
 	| CharLiteral
+	;
+
+objectKeyValuePair
+	: objectKey ':' expression
+	;
+
+objectKey
+	: Identifier
+	| StringLiteral
+	| constant
+	| '{' objectKeyValuePair (',' objectKeyValuePair)* ','? '}'		// nested struct as map key
+	| '{' '}'															// empty struct as map key
 	;
 
 //

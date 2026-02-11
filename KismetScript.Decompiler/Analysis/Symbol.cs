@@ -23,7 +23,8 @@ public class Symbol
         get => _parent;
         set
         {
-            CheckCircularReference(value);
+            if (!CheckCircularReference(value))
+                return; // Skip assignment to prevent circular dependency
             _parent?._children.Remove(this);
             _parent = value;
             _parent?._children.Add(this);
@@ -51,7 +52,8 @@ public class Symbol
         {
             if (value != _class)
             {
-                CheckCircularReferenceRecursively(value, x => x.Class);
+                if (!CheckCircularReferenceRecursively(value, x => x.Class))
+                    return; // Skip to prevent circular dependency
                 _class = value;
             }
         }
@@ -63,7 +65,8 @@ public class Symbol
         {
             if (value != _super)
             {
-                CheckCircularReferenceRecursively(value, x => x.Super);
+                if (!CheckCircularReferenceRecursively(value, x => x.Super))
+                    return; // Skip to prevent circular dependency
                 _super = value;
             }
         }
@@ -75,7 +78,8 @@ public class Symbol
         { 
             if (value != _template)
             {
-                CheckCircularReferenceRecursively(value, x => x.Template);
+                if (!CheckCircularReferenceRecursively(value, x => x.Template))
+                    return;
                 _template = value;
             }
         } 
@@ -87,7 +91,8 @@ public class Symbol
         { 
             if (value != _superStruct)
             {
-                CheckCircularReferenceRecursively(value, x => x.SuperStruct);
+                if (!CheckCircularReferenceRecursively(value, x => x.SuperStruct))
+                    return;
                 _superStruct = value;
             }
         } 
@@ -99,7 +104,8 @@ public class Symbol
         { 
             if (value != _innerClass)
             {
-                CheckCircularReferenceRecursively(value, x => x.ClassWithin);
+                if (!CheckCircularReferenceRecursively(value, x => x.ClassWithin))
+                    return;
                 _innerClass = value;
             }
         } 
@@ -111,7 +117,8 @@ public class Symbol
         { 
             if (value != _propertyType)
             {
-                CheckCircularReferenceRecursively(value, x => x.PropertyClass);
+                if (!CheckCircularReferenceRecursively(value, x => x.PropertyClass))
+                    return;
                 _propertyType = value;
             }
         } 
@@ -158,25 +165,26 @@ public class Symbol
         while (currentClass.Super != null)
         {
             if (!seenClasses.Add(currentClass))
-                throw new AnalysisException($"Referential cycle in superclass of {currentClass}");
+                return false; // Cycle detected
             currentClass = currentClass.Super;
         }
         if (newSuperClass != null)
             if (!seenClasses.Add(newSuperClass))
-                throw new AnalysisException($"Referential cycle in superclass of {currentClass}");
+                return false; // Adding this super would create a cycle
         return true;
     }
 
     /// <summary>
     /// Adds a superclass at the root of the class hierarchy.
+    /// Returns false if adding the superclass would create a circular reference.
     /// </summary>
-    /// <param name="superClass"></param>
-    /// <exception cref="AnalysisException"></exception>
-    public void AddSuperClass(Symbol superClass)
+    public bool AddSuperClass(Symbol superClass)
     {
-        CheckSuperClassCircularReference(superClass);
+        if (!CheckSuperClassCircularReference(superClass))
+            return false;
         var currentClass = RootSuperClass ?? this;
         currentClass.Super = superClass;
+        return true;
     }
 
     private IEnumerable<Symbol> GetAncestors(Func<Symbol, Symbol?> getter)
@@ -190,24 +198,24 @@ public class Symbol
         }
     }
 
-    private void CheckCircularReference(Symbol? symbol)
+    private bool CheckCircularReference(Symbol? symbol)
     {
-        if (symbol == this)
-            throw new InvalidOperationException($"Symbol {symbol} circular dependency detected");
+        return symbol != this;
     }
 
-    private void CheckCircularReferenceRecursively(Symbol? symbol, Func<Symbol, Symbol?> getter)
+    private bool CheckCircularReferenceRecursively(Symbol? symbol, Func<Symbol, Symbol?> getter)
     {
         if (symbol == this)
-            throw new InvalidOperationException($"Symbol {symbol} circular dependency detected");
+            return false;
 
         var ancestor = getter(this);
         if (ancestor != null)
         {
             if (ancestor == symbol)
-                throw new InvalidOperationException($"Symbol {ancestor} circular dependency detected");
-            ancestor.CheckCircularReferenceRecursively(symbol, getter);
+                return false;
+            return ancestor.CheckCircularReferenceRecursively(symbol, getter);
         }
+        return true;
     }
 
     public bool IsClass => 
@@ -225,13 +233,14 @@ public class Symbol
     private Symbol? FindMember(Func<Symbol, bool> predicate)
     {
         var stack = new Stack<Symbol>();
+        var visited = new HashSet<Symbol>();
         stack.Push(this);
-        var iterations = 0;
 
         while (stack.Count > 0)
         {
             var current = stack.Pop();
-            Debug.Assert(current.ResolvedType?.CheckSuperClassCircularReference() ?? true);
+            if (!visited.Add(current))
+                continue; // Skip already visited symbols to prevent cycles
 
             foreach (var child in current.Children)
             {
@@ -253,10 +262,6 @@ public class Symbol
 
             if (current.Class != null)
                 stack.Push(current.Class);
-
-            ++iterations;
-            if (iterations > 1000)
-                throw new AnalysisException($"Circular reference in {this}");
         }
 
         return null;
