@@ -1289,77 +1289,104 @@ public partial class UAssetLinker : PackageLinker<UAsset>
     /// <summary>
     /// Recursively ensures all property-related names are in the name map.
     /// </summary>
-    private void EnsurePropertyNamesRecursive(IEnumerable<PropertyData> properties)
+    /// <param name="properties">Properties to scan.</param>
+    /// <param name="insideMapEntry">If true, skip registering PropertyType and Name for
+    /// top-level entries because map entries are written with includeHeader=false.</param>
+    private void EnsurePropertyNamesRecursive(IEnumerable<PropertyData> properties, bool insideMapEntry = false)
     {
         foreach (var prop in properties)
         {
-            // Ensure the property type name (e.g., "StrProperty", "IntProperty") is in the name map
-            if (prop.PropertyType?.Value != null)
+            if (!insideMapEntry)
             {
-                EnsureNameInMap(prop.PropertyType.Value);
-            }
+                // Ensure the property type name (e.g., "StrProperty", "IntProperty") is in the name map
+                if (prop.PropertyType?.Value != null)
+                {
+                    EnsureNameInMap(prop.PropertyType.Value);
+                }
 
-            // Ensure the property name is in the name map (skip dummy names used by array elements)
-            if (prop.Name?.Value?.Value != null && prop.Name.Number != int.MinValue)
-            {
-                EnsureNameInMap(prop.Name.Value.Value);
+                // Ensure the property name is in the name map (skip dummy names used by array elements)
+                if (prop.Name?.Value?.Value != null && prop.Name.Number != int.MinValue)
+                {
+                    EnsureNameInMap(prop.Name.Value.Value);
+                }
             }
 
             // Handle nested properties
             if (prop is StructPropertyData structProp)
             {
-                // Ensure StructType is in the name map (skip dummy FNames used by MapPropertyData for struct entries)
-                if (structProp.StructType?.Value?.Value != null && !structProp.StructType.IsDummy)
+                // Ensure StructType is in the name map (skip dummy FNames, and skip if inside map entry
+                // since struct type is not written for map entries with includeHeader=false)
+                if (!insideMapEntry && structProp.StructType?.Value?.Value != null && !structProp.StructType.IsDummy)
                 {
                     EnsureNameInMap(structProp.StructType.Value.Value);
                 }
                 if (structProp.Value != null)
                 {
-                    EnsurePropertyNamesRecursive(structProp.Value);
+                    // Propagate insideMapEntry: all data within map entries is serialized
+                    // without property headers, so their type names don't need NameMap entries.
+                    EnsurePropertyNamesRecursive(structProp.Value, insideMapEntry);
                 }
             }
             else if (prop is ArrayPropertyData arrayProp)
             {
-                // Ensure ArrayType is in the name map
-                if (arrayProp.ArrayType?.Value?.Value != null)
+                // Ensure ArrayType is in the name map (only outside map entries)
+                if (!insideMapEntry)
                 {
-                    EnsureNameInMap(arrayProp.ArrayType.Value.Value);
-                }
-                // Also ensure "StructProperty" is registered if array contains structs
-                if (arrayProp.ArrayType?.Value?.Value == "StructProperty")
-                {
-                    EnsureNameInMap("StructProperty");
+                    if (arrayProp.ArrayType?.Value?.Value != null)
+                    {
+                        EnsureNameInMap(arrayProp.ArrayType.Value.Value);
+                    }
+                    if (arrayProp.ArrayType?.Value?.Value == "StructProperty")
+                    {
+                        EnsureNameInMap("StructProperty");
+                    }
                 }
                 if (arrayProp.Value != null)
                 {
-                    EnsurePropertyNamesRecursive(arrayProp.Value);
+                    // Propagate insideMapEntry through array recursion
+                    EnsurePropertyNamesRecursive(arrayProp.Value, insideMapEntry);
                 }
             }
             else if (prop is MapPropertyData mapProp)
             {
                 if (mapProp.Value != null)
                 {
-                    if (mapProp.Value.Keys.Count > 0)
+                    // Use the map's header type FNames (KeyType/ValueType) rather than the
+                    // first entry's PropertyType to avoid adding unwanted names to the NameMap
+                    // (e.g., "NiagaraVariable" when the header uses "StructProperty").
+                    if (!insideMapEntry)
                     {
-                        var firstKey = mapProp.Value.Keys.First();
-                        if (firstKey.PropertyType?.Value != null)
-                            EnsureNameInMap(firstKey.PropertyType.Value);
+                        if (mapProp.KeyType?.Value?.Value != null && !mapProp.KeyType.IsDummy)
+                        {
+                            EnsureNameInMap(mapProp.KeyType.Value.Value);
+                        }
+                        else if (mapProp.Value.Keys.Count > 0)
+                        {
+                            var firstKey = mapProp.Value.Keys.First();
+                            if (firstKey.PropertyType?.Value != null)
+                                EnsureNameInMap(firstKey.PropertyType.Value);
+                        }
+                        if (mapProp.ValueType?.Value?.Value != null && !mapProp.ValueType.IsDummy)
+                        {
+                            EnsureNameInMap(mapProp.ValueType.Value.Value);
+                        }
+                        else if (mapProp.Value.Count > 0)
+                        {
+                            var firstValue = mapProp.Value.Values.First();
+                            if (firstValue.PropertyType?.Value != null)
+                                EnsureNameInMap(firstValue.PropertyType.Value);
+                        }
                     }
-                    if (mapProp.Value.Count > 0)
-                    {
-                        var firstValue = mapProp.Value.Values.First();
-                        if (firstValue.PropertyType?.Value != null)
-                            EnsureNameInMap(firstValue.PropertyType.Value);
-                    }
-                    EnsurePropertyNamesRecursive(mapProp.Value.Keys);
-                    EnsurePropertyNamesRecursive(mapProp.Value.Values);
+                    // Map entries are written without headers, so pass insideMapEntry=true
+                    EnsurePropertyNamesRecursive(mapProp.Value.Keys, insideMapEntry: true);
+                    EnsurePropertyNamesRecursive(mapProp.Value.Values, insideMapEntry: true);
                 }
             }
             else if (prop is SetPropertyData setProp)
             {
                 if (setProp.Value != null)
                 {
-                    EnsurePropertyNamesRecursive(setProp.Value);
+                    EnsurePropertyNamesRecursive(setProp.Value, insideMapEntry);
                 }
             }
             else if (prop is EnumPropertyData enumProp)

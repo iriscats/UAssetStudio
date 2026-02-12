@@ -592,18 +592,18 @@ namespace KismetScript.Decompiler
                     }
                 case EX_RotationConst expr:
                     {
-                        return $"RotationConst({expr.Value.Pitch}, {expr.Value.Yaw}, {expr.Value.Roll})";
+                        return $"RotationConst({FormatDouble(expr.Value.Pitch)}, {FormatDouble(expr.Value.Yaw)}, {FormatDouble(expr.Value.Roll)})";
                     }
                 case EX_VectorConst expr:
                     {
-                        return $"VectorConst({expr.Value.X}, {expr.Value.Y}, {expr.Value.Z})";
+                        return $"VectorConst({FormatDouble(expr.Value.X)}, {FormatDouble(expr.Value.Y)}, {FormatDouble(expr.Value.Z)})";
                     }
                 case EX_TransformConst expr:
                     {
                         var @params =
-                            $"{expr.Value.Rotation.X}, {expr.Value.Rotation.Y}, {expr.Value.Rotation.Z}, {expr.Value.Rotation.W}, " +
-                            $"{expr.Value.Translation.X}, {expr.Value.Translation.Y}, {expr.Value.Translation.Z}, " +
-                            $"{expr.Value.Scale3D.X}, {expr.Value.Scale3D.Y}, {expr.Value.Scale3D.Z}";
+                            $"{FormatDouble(expr.Value.Rotation.X)}, {FormatDouble(expr.Value.Rotation.Y)}, {FormatDouble(expr.Value.Rotation.Z)}, {FormatDouble(expr.Value.Rotation.W)}, " +
+                            $"{FormatDouble(expr.Value.Translation.X)}, {FormatDouble(expr.Value.Translation.Y)}, {FormatDouble(expr.Value.Translation.Z)}, " +
+                            $"{FormatDouble(expr.Value.Scale3D.X)}, {FormatDouble(expr.Value.Scale3D.Y)}, {FormatDouble(expr.Value.Scale3D.Z)}";
                         return $"TransformConst({@params})";
                     }
                 case EX_StructConst expr:

@@ -52,6 +52,11 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     // may incorrectly compile as EX_Context. These need full expression replacement.
     private Queue<KismetExpression> _preservedStructMemberContexts = new();
 
+    // Set of expressions whose property pointer fixups should be skipped.
+    // When EX_Context is replaced with EX_StructMemberContext, the ContextExpression subtree
+    // is discarded, so its property pointers should not consume from the preserved path queue.
+    private HashSet<KismetExpression> _skipPropertyFixupExpressions = new();
+
     // Queues to preserve original bytecode offset values (PushingAddress, CodeOffset, etc.)
     // These are restored after expression type replacements to maintain correct byte offsets.
     private Queue<uint> _preservedPushingAddresses = new();
@@ -60,6 +65,7 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
     private Queue<uint> _preservedSkipOffsets = new();
     private Queue<uint> _preservedSwitchEndGotoOffsets = new();
     private Queue<(uint NextOffset, int CaseCount)> _preservedSwitchCaseOffsets = new();
+    private Queue<uint> _preservedContextOffsets = new();
 
     protected PackageLinker()
     {
@@ -1191,6 +1197,11 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         int totalCount = 0;
         foreach (var baseExpr in bytecode.Flatten())
         {
+            // Skip property pointer fixup for expressions that will be discarded
+            // (e.g., the ContextExpression subtree when replacing EX_Context → EX_StructMemberContext)
+            if (_skipPropertyFixupExpressions.Contains(baseExpr))
+                continue;
+
             switch (baseExpr)
             {
                 case EX_BindDelegate expr:
@@ -1372,11 +1383,33 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 case EX_Context expr:
                     FixPropertyPointer(ref expr.RValuePointer);
                     // Restore original context subtype (EX_ClassContext, EX_Context_FailSilent)
-                    // Only for same-structure types (subclass relationship with EX_Context)
+                    // or replace with EX_StructMemberContext if the compiler miscompiled it.
                     if (_preservedContextTypes.Count > 0)
                     {
                         var originalType = _preservedContextTypes.Dequeue();
-                        if (expr.GetType() != originalType && originalType.IsSubclassOf(typeof(EX_Context)))
+                        if (originalType == typeof(EX_StructMemberContext))
+                        {
+                            // The compiler incorrectly emitted EX_Context instead of EX_StructMemberContext.
+                            // Convert back: StructMemberExpression = RValuePointer, StructExpression = ObjectExpression.
+                            var replacement = new EX_StructMemberContext()
+                            {
+                                StructMemberExpression = expr.RValuePointer,
+                                StructExpression = expr.ObjectExpression
+                            };
+                            _pendingExprReplacements[expr] = replacement;
+
+                            // Mark the ContextExpression subtree as skippable since it will be discarded.
+                            // This prevents the extra property pointer references from consuming
+                            // entries from the preserved path queue.
+                            if (expr.ContextExpression != null)
+                            {
+                                foreach (var childExpr in expr.ContextExpression.Flatten())
+                                {
+                                    _skipPropertyFixupExpressions.Add(childExpr);
+                                }
+                            }
+                        }
+                        else if (expr.GetType() != originalType && originalType.IsSubclassOf(typeof(EX_Context)))
                         {
                             KismetExpression? replacement = null;
                             if (originalType == typeof(EX_ClassContext))
@@ -1444,6 +1477,13 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
                 case EX_StructMemberContext expr:
                     FixPropertyPointer(ref expr.StructMemberExpression);
+                    // Consume the preserved context type entry when the compiler
+                    // correctly emitted EX_StructMemberContext (keeps queue in sync).
+                    if (_preservedContextTypes.Count > 0 &&
+                        _preservedContextTypes.Peek() == typeof(EX_StructMemberContext))
+                    {
+                        _preservedContextTypes.Dequeue();
+                    }
                     break;
 
                 default:
@@ -1486,6 +1526,9 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                 case EX_SwitchValue sv when _preservedSwitchEndGotoOffsets.Count > 0:
                     sv.EndGotoOffset = _preservedSwitchEndGotoOffsets.Dequeue();
                     break;
+                case EX_Context ctx when _preservedContextOffsets.Count > 0:
+                    ctx.Offset = _preservedContextOffsets.Dequeue();
+                    break;
             }
         }
 
@@ -1509,40 +1552,102 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
 
     private void ApplyExpressionReplacementsInChildren(KismetExpression expr)
     {
-        // Handle expression types that contain sub-expression arrays
+        // Handle ALL expression types that contain sub-expressions.
+        // This must mirror the visitor in KismetExpressionVisitor.cs to ensure
+        // replacements can be applied at any level of the expression tree.
         switch (expr)
         {
+            // Function calls with Parameters arrays
+            // Note: EX_CallMath extends EX_FinalFunction, EX_LocalFinalFunction extends EX_FinalFunction,
+            // EX_LocalVirtualFunction extends EX_VirtualFunction - all handled by base class cases.
+            case EX_CallMulticastDelegate cmd:
+                ReplaceIfNeeded(ref cmd.Delegate);
+                ApplyExpressionReplacements(cmd.Parameters);
+                break;
             case EX_FinalFunction ff:
                 ApplyExpressionReplacements(ff.Parameters);
                 break;
             case EX_VirtualFunction vf:
                 ApplyExpressionReplacements(vf.Parameters);
                 break;
+
+            // Context expressions
             case EX_Context ctx:
                 ReplaceIfNeeded(ref ctx.ObjectExpression);
                 ReplaceIfNeeded(ref ctx.ContextExpression);
                 break;
-            // EX_Context_FailSilent extends EX_Context, already handled above
+            // EX_ClassContext and EX_Context_FailSilent extend EX_Context, handled above
+            case EX_StructMemberContext smc:
+                ReplaceIfNeeded(ref smc.StructExpression);
+                break;
+            case EX_InterfaceContext ic:
+                ReplaceIfNeeded(ref ic.InterfaceValue);
+                break;
+
+            // Let expressions (assignment) - both Variable and Expression sides
             case EX_Let let:
+                ReplaceIfNeeded(ref let.Variable);
                 ReplaceIfNeeded(ref let.Expression);
                 break;
             case EX_LetObj letObj:
+                ReplaceIfNeeded(ref letObj.VariableExpression);
                 ReplaceIfNeeded(ref letObj.AssignmentExpression);
                 break;
             case EX_LetBool letBool:
+                ReplaceIfNeeded(ref letBool.VariableExpression);
                 ReplaceIfNeeded(ref letBool.AssignmentExpression);
                 break;
             case EX_LetWeakObjPtr letWeak:
+                ReplaceIfNeeded(ref letWeak.VariableExpression);
                 ReplaceIfNeeded(ref letWeak.AssignmentExpression);
                 break;
             case EX_LetDelegate letDel:
+                ReplaceIfNeeded(ref letDel.VariableExpression);
                 ReplaceIfNeeded(ref letDel.AssignmentExpression);
                 break;
             case EX_LetMulticastDelegate letMcDel:
+                ReplaceIfNeeded(ref letMcDel.VariableExpression);
                 ReplaceIfNeeded(ref letMcDel.AssignmentExpression);
                 break;
+            case EX_LetValueOnPersistentFrame letPf:
+                ReplaceIfNeeded(ref letPf.AssignmentExpression);
+                break;
+
+            // Cast expressions
+            case EX_PrimitiveCast pc:
+                ReplaceIfNeeded(ref pc.Target);
+                break;
+            case EX_ObjToInterfaceCast otic:
+                ReplaceIfNeeded(ref otic.Target);
+                break;
+            case EX_CrossInterfaceCast cic:
+                ReplaceIfNeeded(ref cic.Target);
+                break;
+            case EX_InterfaceToObjCast itoc:
+                ReplaceIfNeeded(ref itoc.Target);
+                break;
+            case EX_MetaCast mc:
+                ReplaceIfNeeded(ref mc.TargetExpression);
+                break;
+            case EX_DynamicCast dc:
+                ReplaceIfNeeded(ref dc.TargetExpression);
+                break;
+
+            // Control flow
             case EX_Return ret:
                 ReplaceIfNeeded(ref ret.ReturnExpression);
+                break;
+            case EX_JumpIfNot jin:
+                ReplaceIfNeeded(ref jin.BooleanExpression);
+                break;
+            case EX_Assert asrt:
+                ReplaceIfNeeded(ref asrt.AssertExpression);
+                break;
+            case EX_PopExecutionFlowIfNot pefin:
+                ReplaceIfNeeded(ref pefin.BooleanExpression);
+                break;
+            case EX_ComputedJump cj:
+                ReplaceIfNeeded(ref cj.CodeOffsetExpression);
                 break;
             case EX_SwitchValue sv:
                 ReplaceIfNeeded(ref sv.IndexTerm);
@@ -1557,6 +1662,78 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                         sv.Cases[ci] = caseItem;
                     }
                 }
+                break;
+
+            // Delegate operations
+            case EX_AddMulticastDelegate amd:
+                ReplaceIfNeeded(ref amd.Delegate);
+                ReplaceIfNeeded(ref amd.DelegateToAdd);
+                break;
+            case EX_RemoveMulticastDelegate rmd:
+                ReplaceIfNeeded(ref rmd.Delegate);
+                ReplaceIfNeeded(ref rmd.DelegateToAdd);
+                break;
+            case EX_ClearMulticastDelegate cmd2:
+                ReplaceIfNeeded(ref cmd2.DelegateToClear);
+                break;
+            case EX_BindDelegate bd:
+                ReplaceIfNeeded(ref bd.Delegate);
+                ReplaceIfNeeded(ref bd.ObjectTerm);
+                break;
+
+            // Collection expressions with element arrays
+            case EX_SetArray sa:
+                if (sa.AssigningProperty != null)
+                    ReplaceIfNeeded(ref sa.AssigningProperty);
+                ApplyExpressionReplacements(sa.Elements);
+                break;
+            case EX_SetSet ss:
+                ReplaceIfNeeded(ref ss.SetProperty);
+                ApplyExpressionReplacements(ss.Elements);
+                break;
+            case EX_SetMap sm:
+                ReplaceIfNeeded(ref sm.MapProperty);
+                ApplyExpressionReplacements(sm.Elements);
+                break;
+            case EX_ArrayConst ac:
+                ApplyExpressionReplacements(ac.Elements);
+                break;
+            case EX_SetConst sc:
+                ApplyExpressionReplacements(sc.Elements);
+                break;
+            case EX_MapConst mc2:
+                ApplyExpressionReplacements(mc2.Elements);
+                break;
+            case EX_StructConst stc:
+                if (stc.Value != null)
+                    ApplyExpressionReplacements(stc.Value);
+                break;
+
+            // Array operations
+            case EX_ArrayGetByRef agbr:
+                ReplaceIfNeeded(ref agbr.ArrayVariable);
+                ReplaceIfNeeded(ref agbr.ArrayIndex);
+                break;
+
+            // Misc expressions with sub-expressions
+            // Note: Value is a property, not a field, so we need a temp variable for ref
+            case EX_SoftObjectConst soc:
+                {
+                    var val = soc.Value;
+                    ReplaceIfNeeded(ref val);
+                    soc.Value = val;
+                }
+                break;
+            case EX_FieldPathConst fpc:
+                {
+                    var val = fpc.Value;
+                    ReplaceIfNeeded(ref val);
+                    fpc.Value = val;
+                }
+                break;
+
+            default:
+                // Leaf expressions (constants, variables, jumps, etc.) have no sub-expressions
                 break;
         }
 
@@ -1879,6 +2056,8 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
         _pendingExprReplacements.Clear();
         _preservedContextTypes.Clear();
         _preservedStructMemberContexts.Clear();
+        _skipPropertyFixupExpressions.Clear();
+        _preservedContextOffsets.Clear();
         _preservedPushingAddresses.Clear();
         _preservedJumpOffsets.Clear();
         _preservedJumpIfNotOffsets.Clear();
@@ -1997,9 +2176,12 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
             }
 
             // Preserve original EX_StructMemberContext expressions
-            // The compiler may incorrectly compile these as EX_Context
+            // The compiler may incorrectly compile these as EX_Context.
+            // We also enqueue the type into _preservedContextTypes so that
+            // the fixup loop can detect and replace miscompiled EX_Context nodes.
             if (expr is EX_StructMemberContext)
             {
+                _preservedContextTypes.Enqueue(typeof(EX_StructMemberContext));
                 _preservedStructMemberContexts.Enqueue(expr);
             }
 
@@ -2020,6 +2202,9 @@ public abstract partial class PackageLinker<T> where T : UnrealPackage
                     break;
                 case EX_SwitchValue sv:
                     _preservedSwitchEndGotoOffsets.Enqueue(sv.EndGotoOffset);
+                    break;
+                case EX_Context ctx:
+                    _preservedContextOffsets.Enqueue(ctx.Offset);
                     break;
             }
         }

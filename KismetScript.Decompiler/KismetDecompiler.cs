@@ -414,9 +414,15 @@ public partial class KismetDecompiler
 
     /// <summary>
     /// Format a float value with proper suffix using round-trip format for exact precision.
+    /// Preserves negative zero (-0.0f).
     /// </summary>
     private string FormatFloat(float value)
     {
+        // Detect negative zero: value == 0 but has the sign bit set
+        if (value == 0.0f && float.IsNegativeInfinity(1.0f / value))
+        {
+            return "-0.0f";
+        }
         // Use "R" (round-trip) format to preserve exact binary representation
         var str = value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
         // Ensure there's a decimal point or 'E' so it's recognized as float
@@ -425,6 +431,20 @@ public partial class KismetDecompiler
             str += ".0";
         }
         return str + "f";
+    }
+
+    /// <summary>
+    /// Format a double value using round-trip format for exact precision.
+    /// Preserves negative zero (-0.0).
+    /// </summary>
+    private static string FormatDouble(double value)
+    {
+        // Detect negative zero: value == 0 but has the sign bit set
+        if (value == 0.0 && double.IsNegativeInfinity(1.0 / value))
+        {
+            return "-0.0";
+        }
+        return value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>
