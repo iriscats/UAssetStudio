@@ -12,17 +12,19 @@ namespace UAssetStudio.Cli.CMD
             var scriptArg = new Argument<string>("script", description: "Path to input .kms");
             var assetOpt = new Option<string?>("--asset", description: "Original asset path (.uasset); defaults to script .uasset neighbor");
             var outdirOpt = new Option<string?>("--outdir", description: "Output directory; default = script directory");
+            var outFileOpt = new Option<string?>("--out", description: "Output file path (overrides --outdir)");
             var compile = new Command("compile", "Compile .kms to .uasset")
             {
                 scriptArg,
                 assetOpt,
-                outdirOpt
+                outdirOpt,
+                outFileOpt
             };
 
             compile.AddOption(ueVersion);
             compile.AddOption(mappings);
 
-            compile.SetHandler((EngineVersion ver, string? mapPath, string scriptPath, string? assetPath, string? outdir) =>
+            compile.SetHandler((EngineVersion ver, string? mapPath, string scriptPath, string? assetPath, string? outdir, string? outFile) =>
             {
                 if (!File.Exists(scriptPath))
                 {
@@ -67,11 +69,27 @@ namespace UAssetStudio.Cli.CMD
                 var newAsset = linker
                     .LinkCompiledScript(script)
                     .Build();
-                var dir = outdir ?? Path.GetDirectoryName(scriptPath) ?? ".";
-                var outFile = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(scriptPath, ".new.uasset")));
-                newAsset.Write(outFile);
-                Console.WriteLine($"Compiled: {scriptPath} -> {outFile}");
-            }, ueVersion, mappings, scriptArg, assetOpt, outdirOpt);
+
+                string outputPath;
+                if (!string.IsNullOrEmpty(outFile))
+                {
+                    // Use explicit output file path
+                    outputPath = outFile;
+                    var outDir = Path.GetDirectoryName(outputPath);
+                    if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+                    {
+                        Directory.CreateDirectory(outDir);
+                    }
+                }
+                else
+                {
+                    var dir = outdir ?? Path.GetDirectoryName(scriptPath) ?? ".";
+                    outputPath = Path.Join(dir, Path.GetFileName(Path.ChangeExtension(scriptPath, ".new.uasset")));
+                }
+
+                newAsset.Write(outputPath);
+                Console.WriteLine($"Compiled: {scriptPath} -> {outputPath}");
+            }, ueVersion, mappings, scriptArg, assetOpt, outdirOpt, outFileOpt);
 
             return compile;
         }
