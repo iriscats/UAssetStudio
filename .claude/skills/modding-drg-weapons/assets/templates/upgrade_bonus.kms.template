@@ -1,0 +1,23 @@
+[Import("/Script/FSD")]
+public BoltActionRifleUpgrade Default__BoltActionRifleUpgrade;
+
+[Import("/Script/FSD")]
+public class BoltActionRifleUpgrade {}
+
+[Import("/Script/FSD")]
+public class StatusEffect {}
+
+[Import("/Script/Engine")]
+public class BlueprintGeneratedClass {}
+
+
+[Import("/Game/WeaponsNTools/BoltActionRifle/STE_{{MOD_NAME}}")]
+public class STE_{{MOD_NAME}}_C {}
+
+
+object OC_Bonus_{{MOD_NAME}} : BoltActionRifleUpgrade {
+    Enum<EBoltActionRifleUpgrades> UpgradeType = `EBoltActionRifleUpgrades::{{UPGRADE_TYPE}}`;
+    float Amount = {{AMOUNT}}f;
+
+    Struct<Guid> SaveGameID = { SaveGameID: "{{GUID}}" };
+}

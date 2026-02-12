@@ -1,0 +1,38 @@
+[Import("/Script/FSD")]
+public class CombinedUpgrade {}
+
+[Import("/Script/FSD")]
+public class OverclockUpgrade {}
+
+[Import("/Script/FSD")]
+public OverclockUpgrade Default__OverclockUpgrade;
+
+[Import("/Script/FSD")]
+public class ItemUpgradeCategory {}
+
+[Import("/Script/FSD")]
+public class SchematicCategory {}
+
+
+[Import("/Game/WeaponsNTools/_UpgradeCategories/UPC_{{WEAPON}}")]
+public ItemUpgradeCategory UPC_{{WEAPON}};
+
+[Import("/Game/GameElements/Schematics/Categories/{{CATEGORY}}")]
+public SchematicCategory {{CATEGORY}};
+
+[Import("/Game/WeaponsNTools/BoltActionRifle/Overclocks/OC_BonusesAndPenalties/OC_Bonus_{{MOD_NAME}}")]
+public BoltActionRifleUpgrade OC_Bonus_{{MOD_NAME}};
+
+
+object OC_{{WEAPON}}_{{MOD_NAME}}_C : OverclockUpgrade {
+    Object<SchematicCategory> SchematicCategory = {{CATEGORY}};
+    Array<SoftObject> CombinedUpgrades = ["/Game/WeaponsNTools/BoltActionRifle/Overclocks/OC_BonusesAndPenalties/OC_Bonus_{{MOD_NAME}}.OC_Bonus_{{MOD_NAME}}"];
+    Text Name = "{{MOD_NAME}}";
+    Text Description = "{{DESCRIPTION}}";
+    Object<ItemUpgradeCategory> Category = UPC_{{WEAPON}};
+    Array<Struct<ItemUpgradeStatText>> StatTexts = [
+        { StatText: "{{STAT_TEXT}}", IsAdventageous: true }
+    ];
+    Struct<Guid> SaveGameID = { SaveGameID: "{{GUID}}" };
+    Object<Class> NativeClass = CombinedUpgrade;
+}

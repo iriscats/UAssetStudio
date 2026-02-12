@@ -1,0 +1,38 @@
+[Import("/Script/FSD")]
+public class StatChangeStatusEffectItem {}
+
+[Import("/Script/FSD")]
+public StatusEffect Default__StatusEffect;
+
+[Import("/Script/FSD")]
+public class PawnStat {}
+
+[Import("/Script/FSD")]
+public class PawnAffliction {}
+
+[Import("/Script/Engine")]
+public class BlueprintGeneratedClass {}
+
+[Import("/Script/CoreUObject")]
+public class Object {}
+
+
+[Import("/Game/GameElements/PawnStats/PST_DamageResistance")]
+public PawnStat PST_DamageResistance;
+
+[Import("/Game/GameElements/PawnAffliction/PAF_IronWill")]
+public PawnAffliction PAF_{{MOD_NAME}};
+
+
+object StatChangeStatusEffectItem_0 : StatChangeStatusEffectItem {
+    Object<PawnStat> Stat = PST_DamageResistance;
+    float StatChange = {{STAT_CHANGE}}f;
+    bool AffectedByResistances = false;
+}
+
+[Parsed, ReplicationDataIsSetUp, EditInlineNew, CompiledFromBlueprint, HasInstancedReference]
+class STE_{{MOD_NAME}}_C : StatusEffect {
+    Object<PawnAffliction> PawnAffliction = PAF_{{MOD_NAME}};
+    Array<Object<StatChangeStatusEffectItem>> StatusEffects = [StatChangeStatusEffectItem_0];
+    float Duration = {{DURATION}}f;
+}
